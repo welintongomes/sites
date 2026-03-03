@@ -936,6 +936,9 @@
             const DB_VERSION = 1;
             const STORE_NAME = 'sites';
 
+            let currentPage = 0;
+            const ITEMS_PER_PAGE = 3;
+
             async function initDB() {
                 return new Promise((resolve, reject) => {
                     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -1039,34 +1042,57 @@
             }
 
             // Renderizar lista de sites
-            function renderSites() {
-                console.log('Renderizando - lastOpenedSiteIndex:', lastOpenedSiteIndex);
+
+            function renderSites(append = false) {
                 const grid = document.getElementById('sitesGrid');
-                grid.innerHTML = '';
-                //modificaçao para mostrar os ultimos sites no topo da lista
-                //modificaçao para mostrar os ultimos sites no topo da lista
+
+                if (!append) {
+                    grid.innerHTML = '';
+                    currentPage = 0;
+                }
+
                 let sitesToRender = sites.slice().reverse();
                 if (lastOpenedSiteIndex >= 0) {
                     const lastOpenedSite = sites[lastOpenedSiteIndex];
                     sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
                     sitesToRender.unshift(lastOpenedSite);
                 }
-                sitesToRender.forEach((site, originalIndex) => {
+
+                const start = currentPage * ITEMS_PER_PAGE;
+                const end = start + ITEMS_PER_PAGE;
+                const pageItems = sitesToRender.slice(start, end);
+
+                pageItems.forEach((site) => {
                     const index = sites.indexOf(site);
                     const card = document.createElement('div');
                     card.className = 'site-card';
                     card.innerHTML = `
-                            <h3>${site.name}</h3>
-                            <p>${site.description || 'Sem descrição'}</p>
-                            <div class="site-actions">
-                                <button class="btn btn-primary" onclick="openSite(${index})">Abrir</button>
-                                <button class="btn edit-btn" onclick="editSite(${index})">Editar</button>
-                                <button class="btn btn-danger" onclick="deleteSite(${index})">Excluir</button>
-                            </div>
-                        `;
+            <h3>${site.name}</h3>
+            <p>${site.description || 'Sem descrição'}</p>
+            <div class="site-actions">
+                <button class="btn btn-primary" onclick="openSite(${index})">Abrir</button>
+                <button class="btn edit-btn" onclick="editSite(${index})">Editar</button>
+                <button class="btn btn-danger" onclick="deleteSite(${index})">Excluir</button>
+            </div>
+        `;
                     grid.appendChild(card);
                 });
+
+                // Se ainda tem mais sites, mostra botão
+                if (end < sitesToRender.length) {
+                    const loadBtn = document.createElement('button');
+                    loadBtn.className = 'btn btn-secondary';
+                    loadBtn.textContent = `Carregar mais (${sitesToRender.length - end} restantes)`;
+                    loadBtn.style.cssText = 'width:100%; margin-top:10px; grid-column: 1/-1;';
+                    loadBtn.onclick = () => {
+                        currentPage++;
+                        loadBtn.remove();
+                        renderSites(true); // append = true, não limpa o grid
+                    };
+                    grid.appendChild(loadBtn);
+                }
             }
+
             //Adicionar funcionalidade de pesquisa
             function filterSites(searchTerm) {
                 if (!searchTerm.trim()) {
