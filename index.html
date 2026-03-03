@@ -245,10 +245,10 @@
             /*text-transform: uppercase;*/
             letter-spacing: 2px;
 
-                /* 🔥 ESSENCIAL */
-    white-space: normal;
-    word-break: break-word;
-    overflow-wrap: break-word;
+            /* 🔥 ESSENCIAL */
+            white-space: normal;
+            word-break: break-word;
+            overflow-wrap: break-word;
         }
 
         .site-card p {
@@ -386,8 +386,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.98);
-            z-index: 2000;
+            background: #000000;
+            /* troque para preto sólido, sem transparência */
+            z-index: 9999;
+            /* aumente o z-index */
         }
 
         .fullscreen-content {
@@ -910,7 +912,9 @@
         <div class="fullscreen-overlay" id="fullscreenOverlay">
 
             <div class="fullscreen-content">
-                <iframe class="site-frame" id="siteFrame" srcdoc=""></iframe>
+                <iframe class="site-frame" id="siteFrame" sandbox="allow-scripts allow-forms allow-same-origin"
+                    srcdoc="" style="width:100%; height:100%; border:none; background:#fff;">
+                </iframe>
 
                 <div class="fullscreen-header bottom-header">
                     <div class="left-buttons">
@@ -1000,17 +1004,17 @@
                 }
             }
             // Precarregar recursos críticos
-            function preloadCriticalResources() {
-                if ('serviceWorker' in navigator && 'caches' in window) {
-                    caches.open(CACHE_NAME).then(cache => {
-                        // Precarrega recursos importantes
-                        cache.addAll([
-                            '/',
-                            '/index.html'
-                        ]);
-                    });
-                }
-            }
+            //function preloadCriticalResources() {
+            //if ('serviceWorker' in navigator && 'caches' in window) {
+            //caches.open(CACHE_NAME).then(cache => {
+            // Precarrega recursos importantes
+            //cache.addAll([
+            //'/',
+            //'/index.html'
+            //]);
+            //});
+            //}
+            //}
 
             // Salvar sites no armazenamento indexedb
             async function saveSites() {
@@ -1131,17 +1135,20 @@
                 //lazy loading para otimizaçao
                 const iframe = document.getElementById('siteFrame');
                 iframe.srcdoc = '';
-                setTimeout(() => {
-                    iframe.srcdoc = site.code;
-                }, 100);
+
+                iframe.srcdoc = site.code;
+
                 document.getElementById('fullscreenOverlay').style.display = 'block';
             }
 
             // Fechar tela cheia
             function closeFullscreen() {
+                const iframe = document.getElementById('siteFrame');
+                iframe.srcdoc = '';
+                iframe.src = 'about:blank'; // força parar execução
                 document.getElementById('fullscreenOverlay').style.display = 'none';
                 currentSiteIndex = -1;
-                renderSites(); // Adicionar esta linha
+                renderSites();
             }
 
             // Abrir modal para adicionar site
@@ -1379,8 +1386,8 @@
                 }
             }
 
-            window.addEventListener('online', updateOnlineStatus);
-            window.addEventListener('offline', updateOnlineStatus);
+            // window.addEventListener('online', updateOnlineStatus);
+            // window.addEventListener('offline', updateOnlineStatus);
 
             // Verificar status inicial após carregar
             window.addEventListener('load', function () {
