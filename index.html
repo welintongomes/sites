@@ -929,144 +929,144 @@
 
         </div>
 
+    </div>
+    <script>
+        // mudando para indexedb Configuração do IndexedDB
+        const DB_NAME = 'SitesManagerDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'sites';
 
-        <script>
-            // mudando para indexedb Configuração do IndexedDB
-            const DB_NAME = 'SitesManagerDB';
-            const DB_VERSION = 1;
-            const STORE_NAME = 'sites';
+        let currentPage = 0;
+        const ITEMS_PER_PAGE = 4;//altere para aumentar ou diminuir os itens padrao por pagina ao abrir ou atualizar o site
 
-            let currentPage = 0;
-            const ITEMS_PER_PAGE = 3;
+        async function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-            async function initDB() {
-                return new Promise((resolve, reject) => {
-                    const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
 
-                    request.onerror = () => reject(request.error);
-                    request.onsuccess = () => resolve(request.result);
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    if (!db.objectStoreNames.contains(STORE_NAME)) {
+                        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        }
+        //variaveis globais
+        let sites = [];
+        let currentSiteIndex = -1;
+        let editingIndex = -1;
+        let lastOpenedSiteIndex = -1;
 
-                    request.onupgradeneeded = (event) => {
-                        const db = event.target.result;
-                        if (!db.objectStoreNames.contains(STORE_NAME)) {
-                            db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                        }
-                    };
-                });
-            }
-            //variaveis globais
-            let sites = [];
-            let currentSiteIndex = -1;
-            let editingIndex = -1;
-            let lastOpenedSiteIndex = -1;
+        // Carregar sites do armazenamento ou criar site exemplo
+        async function loadSites() {
+            try {
+                const db = await initDB();
+                const transaction = db.transaction([STORE_NAME], 'readonly');
+                const store = transaction.objectStore(STORE_NAME);
+                const request = store.getAll();
 
-            // Carregar sites do armazenamento ou criar site exemplo
-            async function loadSites() {
-                try {
-                    const db = await initDB();
-                    const transaction = db.transaction([STORE_NAME], 'readonly');
-                    const store = transaction.objectStore(STORE_NAME);
-                    const request = store.getAll();
-
-                    request.onsuccess = () => {
-                        if (request.result.length > 0) {
-                            sites = request.result.map(item => ({
-                                name: item.name,
-                                description: item.description,
-                                code: item.code
-                            }));
-                        } else {
-                            // Manter o site exemplo existente
-                            sites = [{
-                                name: "Contador de Cliques",
-                                description: "Ferramenta simples para contar cliques",
-                                code: `<!DOCTYPE html>
+                request.onsuccess = () => {
+                    if (request.result.length > 0) {
+                        sites = request.result.map(item => ({
+                            name: item.name,
+                            description: item.description,
+                            code: item.code
+                        }));
+                    } else {
+                        // Manter o site exemplo existente
+                        sites = [{
+                            name: "Contador de Cliques",
+                            description: "Ferramenta simples para contar cliques",
+                            code: `<!DOCTYPE html>
         <html lang="pt-BR">
         }
             <\/script>//quando tiver barras elas tem que ter / para funcionar
         </body>
         </html>`
-                                // ... coloque aqui o codigo html para sites exemplo
-                            }];
-                            saveSites(); // Salvar no IndexedDB
+                            // ... coloque aqui o codigo html para sites exemplo
+                        }];
+                        saveSites(); // Salvar no IndexedDB
+                    }
+
+                    // Carregar último site aberto DEPOIS de carregar os sites
+                    const savedLastOpened = localStorage.getItem('lastOpenedSiteIndex');
+                    if (savedLastOpened !== null) {
+                        const index = parseInt(savedLastOpened);
+                        if (index >= 0 && index < sites.length) {
+                            lastOpenedSiteIndex = index;
                         }
+                    }
 
-                        // Carregar último site aberto DEPOIS de carregar os sites
-                        const savedLastOpened = localStorage.getItem('lastOpenedSiteIndex');
-                        if (savedLastOpened !== null) {
-                            const index = parseInt(savedLastOpened);
-                            if (index >= 0 && index < sites.length) {
-                                lastOpenedSiteIndex = index;
-                            }
-                        }
-
-                        renderSites();
-
-                    };
-                } catch (error) {
-                    console.error('Erro ao carregar sites:', error);
                     renderSites();
-                }
+
+                };
+            } catch (error) {
+                console.error('Erro ao carregar sites:', error);
+                renderSites();
             }
-            // Precarregar recursos críticos
-            //function preloadCriticalResources() {
-            //if ('serviceWorker' in navigator && 'caches' in window) {
-            //caches.open(CACHE_NAME).then(cache => {
-            // Precarrega recursos importantes
-            //cache.addAll([
-            //'/',
-            //'/index.html'
-            //]);
-            //});
-            //}
-            //}
+        }
+        // Precarregar recursos críticos
+        //function preloadCriticalResources() {
+        //if ('serviceWorker' in navigator && 'caches' in window) {
+        //caches.open(CACHE_NAME).then(cache => {
+        // Precarrega recursos importantes
+        //cache.addAll([
+        //'/',
+        //'/index.html'
+        //]);
+        //});
+        //}
+        //}
 
-            // Salvar sites no armazenamento indexedb
-            async function saveSites() {
-                try {
-                    const db = await initDB();
-                    const transaction = db.transaction([STORE_NAME], 'readwrite');
-                    const store = transaction.objectStore(STORE_NAME);
+        // Salvar sites no armazenamento indexedb
+        async function saveSites() {
+            try {
+                const db = await initDB();
+                const transaction = db.transaction([STORE_NAME], 'readwrite');
+                const store = transaction.objectStore(STORE_NAME);
 
-                    // Limpar dados existentes
-                    const clearRequest = store.clear();
-                    clearRequest.onsuccess = () => {
-                        // Adicionar todos os sites em batch
-                        sites.forEach(site => {
-                            store.add(site);
-                        });
-                    };
-                } catch (error) {
-                    console.error('Erro ao salvar sites:', error);
-                }
+                // Limpar dados existentes
+                const clearRequest = store.clear();
+                clearRequest.onsuccess = () => {
+                    // Adicionar todos os sites em batch
+                    sites.forEach(site => {
+                        store.add(site);
+                    });
+                };
+            } catch (error) {
+                console.error('Erro ao salvar sites:', error);
+            }
+        }
+
+        // Renderizar lista de sites
+
+        function renderSites(append = false) {
+            const grid = document.getElementById('sitesGrid');
+
+            if (!append) {
+                grid.innerHTML = '';
+                currentPage = 0;
             }
 
-            // Renderizar lista de sites
+            let sitesToRender = sites.slice().reverse();
+            if (lastOpenedSiteIndex >= 0) {
+                const lastOpenedSite = sites[lastOpenedSiteIndex];
+                sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
+                sitesToRender.unshift(lastOpenedSite);
+            }
 
-            function renderSites(append = false) {
-                const grid = document.getElementById('sitesGrid');
+            const start = currentPage * ITEMS_PER_PAGE;
+            const end = start + ITEMS_PER_PAGE;
+            const pageItems = sitesToRender.slice(start, end);
 
-                if (!append) {
-                    grid.innerHTML = '';
-                    currentPage = 0;
-                }
-
-                let sitesToRender = sites.slice().reverse();
-                if (lastOpenedSiteIndex >= 0) {
-                    const lastOpenedSite = sites[lastOpenedSiteIndex];
-                    sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
-                    sitesToRender.unshift(lastOpenedSite);
-                }
-
-                const start = currentPage * ITEMS_PER_PAGE;
-                const end = start + ITEMS_PER_PAGE;
-                const pageItems = sitesToRender.slice(start, end);
-
-                pageItems.forEach((site) => {
-                    const index = sites.indexOf(site);
-                    const card = document.createElement('div');
-                    card.className = 'site-card';
-                    card.innerHTML = `
+            pageItems.forEach((site) => {
+                const index = sites.indexOf(site);
+                const card = document.createElement('div');
+                card.className = 'site-card';
+                card.innerHTML = `
             <h3>${site.name}</h3>
             <p>${site.description || 'Sem descrição'}</p>
             <div class="site-actions">
@@ -1075,71 +1075,71 @@
                 <button class="btn btn-danger" onclick="deleteSite(${index})">Excluir</button>
             </div>
         `;
-                    grid.appendChild(card);
-                });
+                grid.appendChild(card);
+            });
 
-                // Se ainda tem mais sites, mostra botão
-                if (end < sitesToRender.length) {
-                    const loadBtn = document.createElement('button');
-                    loadBtn.className = 'btn btn-secondary';
-                    loadBtn.textContent = `Carregar mais (${sitesToRender.length - end} restantes)`;
-                    loadBtn.style.cssText = 'width:100%; margin-top:10px; grid-column: 1/-1;';
-                    loadBtn.onclick = () => {
-                        currentPage++;
-                        loadBtn.remove();
-                        renderSites(true); // append = true, não limpa o grid
-                    };
-                    grid.appendChild(loadBtn);
-                }
+            // Se ainda tem mais sites, mostra botão
+            if (end < sitesToRender.length) {
+                const loadBtn = document.createElement('button');
+                loadBtn.className = 'btn btn-secondary';
+                loadBtn.textContent = `Carregar mais (${sitesToRender.length - end} restantes)`;
+                loadBtn.style.cssText = 'width:100%; margin-top:10px; grid-column: 1/-1;';
+                loadBtn.onclick = () => {
+                    currentPage++;
+                    loadBtn.remove();
+                    renderSites(true); // append = true, não limpa o grid
+                };
+                grid.appendChild(loadBtn);
+            }
+        }
+
+        //Adicionar funcionalidade de pesquisa
+        function filterSites(searchTerm) {
+            if (!searchTerm.trim()) {
+                renderSites();
+                return;
             }
 
-            //Adicionar funcionalidade de pesquisa
-            function filterSites(searchTerm) {
-                if (!searchTerm.trim()) {
-                    renderSites();
-                    return;
+            const searchWords = searchTerm.trim().split(/\s+/).map(word => normalizeText(word));
+
+            const filteredSites = sites.filter(site => {
+                const normalizedName = normalizeText(site.name);
+                const normalizedDesc = site.description ? normalizeText(site.description) : '';
+
+                if (searchWords.length === 1) {
+                    // Uma palavra: busca em qualquer site que contenha essa palavra
+                    return normalizedName.includes(searchWords[0]) || normalizedDesc.includes(searchWords[0]);
+                } else {
+                    // Múltiplas palavras: TODAS devem estar no mesmo título OU na mesma descrição
+                    const nameContainsAll = searchWords.every(word => normalizedName.includes(word));
+                    const descContainsAll = searchWords.every(word => normalizedDesc.includes(word));
+
+                    return nameContainsAll || descContainsAll;
                 }
+            });
 
-                const searchWords = searchTerm.trim().split(/\s+/).map(word => normalizeText(word));
+            const grid = document.getElementById('sitesGrid');
+            grid.innerHTML = '';
 
-                const filteredSites = sites.filter(site => {
-                    const normalizedName = normalizeText(site.name);
-                    const normalizedDesc = site.description ? normalizeText(site.description) : '';
-
-                    if (searchWords.length === 1) {
-                        // Uma palavra: busca em qualquer site que contenha essa palavra
-                        return normalizedName.includes(searchWords[0]) || normalizedDesc.includes(searchWords[0]);
-                    } else {
-                        // Múltiplas palavras: TODAS devem estar no mesmo título OU na mesma descrição
-                        const nameContainsAll = searchWords.every(word => normalizedName.includes(word));
-                        const descContainsAll = searchWords.every(word => normalizedDesc.includes(word));
-
-                        return nameContainsAll || descContainsAll;
-                    }
-                });
-
-                const grid = document.getElementById('sitesGrid');
-                grid.innerHTML = '';
-
-                if (filteredSites.length === 0) {
-                    grid.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">Nenhum site encontrado</p>';
-                    return;
+            if (filteredSites.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">Nenhum site encontrado</p>';
+                return;
+            }
+            //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
+            //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
+            let sitesToRender = filteredSites.slice().reverse();
+            if (lastOpenedSiteIndex >= 0) {
+                const lastOpenedSite = sites[lastOpenedSiteIndex];
+                if (filteredSites.includes(lastOpenedSite)) {
+                    sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
+                    sitesToRender.unshift(lastOpenedSite);
                 }
-                //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
-                //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
-                let sitesToRender = filteredSites.slice().reverse();
-                if (lastOpenedSiteIndex >= 0) {
-                    const lastOpenedSite = sites[lastOpenedSiteIndex];
-                    if (filteredSites.includes(lastOpenedSite)) {
-                        sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
-                        sitesToRender.unshift(lastOpenedSite);
-                    }
-                }
-                sitesToRender.forEach((site) => {
-                    const originalIndex = sites.indexOf(site);
-                    const card = document.createElement('div');
-                    card.className = 'site-card';
-                    card.innerHTML = `
+            }
+            sitesToRender.forEach((site) => {
+                const originalIndex = sites.indexOf(site);
+                const card = document.createElement('div');
+                card.className = 'site-card';
+                card.innerHTML = `
                     <h3>${site.name}</h3>
                     <p>${site.description || 'Sem descrição'}</p>
                     <div class="site-actions">
@@ -1148,301 +1148,302 @@
                         <button class="btn btn-danger" onclick="deleteSite(${originalIndex})">Excluir</button>
                     </div>
                 `;
-                    grid.appendChild(card);
-                });
+                grid.appendChild(card);
+            });
+        }
+
+        // Abrir site em tela cheia
+        function openSite(index) {
+            currentSiteIndex = index;
+            lastOpenedSiteIndex = index;
+            localStorage.setItem('lastOpenedSiteIndex', index.toString());
+            console.log('Site aberto - índice:', index, 'nome:', sites[index].name);
+            const site = sites[index];
+            document.getElementById('fullscreenTitle').textContent = site.name;
+            //lazy loading para otimizaçao
+            const iframe = document.getElementById('siteFrame');
+            iframe.srcdoc = '';
+
+            iframe.srcdoc = site.code;
+
+            document.getElementById('fullscreenOverlay').style.display = 'block';
+        }
+
+        // Fechar tela cheia
+        function closeFullscreen() {
+            const iframe = document.getElementById('siteFrame');
+            iframe.srcdoc = '';
+            iframe.src = 'about:blank'; // força parar execução
+            document.getElementById('fullscreenOverlay').style.display = 'none';
+            currentSiteIndex = -1;
+            renderSites();
+        }
+
+        // Abrir modal para adicionar site
+        function openAddSiteModal() {
+            editingIndex = -1;
+            document.getElementById('modalTitle').textContent = 'Adicionar Nova Ferramenta';
+            document.getElementById('siteName').value = '';
+            document.getElementById('siteDescription').value = '';
+            document.getElementById('siteCode').value = '';
+            document.getElementById('siteModal').style.display = 'block';
+        }
+
+        // Editar site
+        function editSite(index) {
+            if (index < 0 || index >= sites.length) {
+                console.error('Índice de site inválido:', index);
+                return;
             }
 
-            // Abrir site em tela cheia
-            function openSite(index) {
-                currentSiteIndex = index;
-                lastOpenedSiteIndex = index;
-                localStorage.setItem('lastOpenedSiteIndex', index.toString());
-                console.log('Site aberto - índice:', index, 'nome:', sites[index].name);
-                const site = sites[index];
-                document.getElementById('fullscreenTitle').textContent = site.name;
-                //lazy loading para otimizaçao
-                const iframe = document.getElementById('siteFrame');
-                iframe.srcdoc = '';
-
-                iframe.srcdoc = site.code;
-
-                document.getElementById('fullscreenOverlay').style.display = 'block';
+            editingIndex = index;
+            const site = sites[index];
+            document.getElementById('modalTitle').textContent = 'Editar Ferramenta';
+            document.getElementById('siteName').value = site.name;
+            document.getElementById('siteDescription').value = site.description || '';
+            document.getElementById('siteCode').value = site.code;
+            document.getElementById('siteModal').style.display = 'block';
+        }
+        //função para deletar site
+        function deleteSite(index) {
+            if (index < 0 || index >= sites.length) {
+                console.error('Índice de site inválido:', index);
+                return;
             }
 
-            // Fechar tela cheia
-            function closeFullscreen() {
-                const iframe = document.getElementById('siteFrame');
-                iframe.srcdoc = '';
-                iframe.src = 'about:blank'; // força parar execução
-                document.getElementById('fullscreenOverlay').style.display = 'none';
-                currentSiteIndex = -1;
-                renderSites();
-            }
-
-            // Abrir modal para adicionar site
-            function openAddSiteModal() {
-                editingIndex = -1;
-                document.getElementById('modalTitle').textContent = 'Adicionar Nova Ferramenta';
-                document.getElementById('siteName').value = '';
-                document.getElementById('siteDescription').value = '';
-                document.getElementById('siteCode').value = '';
-                document.getElementById('siteModal').style.display = 'block';
-            }
-
-            // Editar site
-            function editSite(index) {
-                if (index < 0 || index >= sites.length) {
-                    console.error('Índice de site inválido:', index);
-                    return;
+            const site = sites[index];
+            if (confirm(`Tem certeza que deseja excluir "${site.name}"?`)) {
+                sites.splice(index, 1);
+                // Atualizar lastOpenedSiteIndex se necessário
+                if (lastOpenedSiteIndex === index) {
+                    lastOpenedSiteIndex = -1;
+                    localStorage.removeItem('lastOpenedSiteIndex');
+                } else if (lastOpenedSiteIndex > index) {
+                    lastOpenedSiteIndex--;
+                    localStorage.setItem('lastOpenedSiteIndex', lastOpenedSiteIndex.toString());
                 }
-
-                editingIndex = index;
-                const site = sites[index];
-                document.getElementById('modalTitle').textContent = 'Editar Ferramenta';
-                document.getElementById('siteName').value = site.name;
-                document.getElementById('siteDescription').value = site.description || '';
-                document.getElementById('siteCode').value = site.code;
-                document.getElementById('siteModal').style.display = 'block';
-            }
-            //função para deletar site
-            function deleteSite(index) {
-                if (index < 0 || index >= sites.length) {
-                    console.error('Índice de site inválido:', index);
-                    return;
-                }
-
-                const site = sites[index];
-                if (confirm(`Tem certeza que deseja excluir "${site.name}"?`)) {
-                    sites.splice(index, 1);
-                    // Atualizar lastOpenedSiteIndex se necessário
-                    if (lastOpenedSiteIndex === index) {
-                        lastOpenedSiteIndex = -1;
-                        localStorage.removeItem('lastOpenedSiteIndex');
-                    } else if (lastOpenedSiteIndex > index) {
-                        lastOpenedSiteIndex--;
-                        localStorage.setItem('lastOpenedSiteIndex', lastOpenedSiteIndex.toString());
-                    }
-                    saveSites();
-                    renderSites();
-                }
-            }
-
-            // Editar site atual (quando em tela cheia)
-            function editCurrentSite() {
-                if (currentSiteIndex >= 0 && currentSiteIndex < sites.length) {
-                    const indexToEdit = currentSiteIndex; // Guarda o índice antes de fechar
-                    closeFullscreen();
-                    setTimeout(() => {
-                        editSite(indexToEdit);
-                    }, 100);
-                }
-            }
-
-            // Fechar modal
-            function closeSiteModal() {
-                document.getElementById('siteModal').style.display = 'none';
-            }
-
-            // Salvar site (formulário)
-            document.getElementById('siteForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-
-                const name = document.getElementById('siteName').value;
-                const description = document.getElementById('siteDescription').value;
-                const code = document.getElementById('siteCode').value;
-
-                const siteData = { name, description, code };
-
-                if (editingIndex >= 0) {
-                    sites[editingIndex] = siteData;
-                } else {
-                    sites.push(siteData);
-                }
-
                 saveSites();
                 renderSites();
+            }
+        }
+
+        // Editar site atual (quando em tela cheia)
+        function editCurrentSite() {
+            if (currentSiteIndex >= 0 && currentSiteIndex < sites.length) {
+                const indexToEdit = currentSiteIndex; // Guarda o índice antes de fechar
+                closeFullscreen();
+                setTimeout(() => {
+                    editSite(indexToEdit);
+                }, 100);
+            }
+        }
+
+        // Fechar modal
+        function closeSiteModal() {
+            document.getElementById('siteModal').style.display = 'none';
+        }
+
+        // Salvar site (formulário)
+        document.getElementById('siteForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            const name = document.getElementById('siteName').value;
+            const description = document.getElementById('siteDescription').value;
+            const code = document.getElementById('siteCode').value;
+
+            const siteData = { name, description, code };
+
+            if (editingIndex >= 0) {
+                sites[editingIndex] = siteData;
+            } else {
+                sites.push(siteData);
+            }
+
+            saveSites();
+            renderSites();
+            closeSiteModal();
+        });
+
+        // Fechar modal ao clicar fora
+        window.addEventListener('click', function (e) {
+            const modal = document.getElementById('siteModal');
+            if (e.target === modal) {
                 closeSiteModal();
-            });
+            }
+        });
 
-            // Fechar modal ao clicar fora
-            window.addEventListener('click', function (e) {
-                const modal = document.getElementById('siteModal');
-                if (e.target === modal) {
-                    closeSiteModal();
-                }
-            });
+        //event listener para funçao de pesquisa
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', function (e) {
+            const searchTerm = e.target.value;
+            const clearBtn = document.getElementById('clearSearch');
 
-            //event listener para funçao de pesquisa
-            let searchTimeout;
-            document.getElementById('searchInput').addEventListener('input', function (e) {
-                const searchTerm = e.target.value;
-                const clearBtn = document.getElementById('clearSearch');
+            clearTimeout(searchTimeout);
 
-                clearTimeout(searchTimeout);
+            if (searchTerm.trim() !== '') {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
 
-                if (searchTerm.trim() !== '') {
-                    clearBtn.style.display = 'block';
-                } else {
-                    clearBtn.style.display = 'none';
-                }
+            searchTimeout = setTimeout(() => {
+                filterSites(searchTerm);
+            }, 300);
+        });
 
-                searchTimeout = setTimeout(() => {
-                    filterSites(searchTerm);
-                }, 300);
-            });
+        // Event listener para o botão de limpar
+        document.getElementById('clearSearch').addEventListener('click', function () {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('clearSearch').style.display = 'none';
+            renderSites();
+            document.getElementById('searchInput').focus();
+        });
 
-            // Event listener para o botão de limpar
-            document.getElementById('clearSearch').addEventListener('click', function () {
+        // Event listener para Enter na pesquisa
+        document.getElementById('searchInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
                 document.getElementById('searchInput').value = '';
                 document.getElementById('clearSearch').style.display = 'none';
                 renderSites();
-                document.getElementById('searchInput').focus();
-            });
-
-            // Event listener para Enter na pesquisa
-            document.getElementById('searchInput').addEventListener('keydown', function (e) {
-                if (e.key === 'Escape') {
-                    document.getElementById('searchInput').value = '';
-                    document.getElementById('clearSearch').style.display = 'none';
-                    renderSites();
-                }
-            });
-            //funçoes para importar e exportar
-            function exportSites() {
-                const dataStr = JSON.stringify(sites, null, 2);
-                const dataBlob = new Blob([dataStr], { type: 'application/json' });
-
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(dataBlob);
-                link.download = 'meus-sites.json';
-                link.click();
             }
+        });
+        //funçoes para importar e exportar
+        function exportSites() {
+            const dataStr = JSON.stringify(sites, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
 
-            function importSites(event) {
-                const file = event.target.files[0];
-                if (!file) return;
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = 'meus-sites.json';
+            link.click();
+        }
 
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    try {
-                        const importedSites = JSON.parse(e.target.result);
-                        if (Array.isArray(importedSites)) {
-                            if (confirm('Isso substituirá todos os seus sites atuais. Deseja continuar?')) {
-                                sites = importedSites;
-                                saveSites();
-                                renderSites();
-                                alert('Sites importados com sucesso!');
-                            }
-                        } else {
-                            alert('Arquivo inválido!');
+        function importSites(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedSites = JSON.parse(e.target.result);
+                    if (Array.isArray(importedSites)) {
+                        if (confirm('Isso substituirá todos os seus sites atuais. Deseja continuar?')) {
+                            sites = importedSites;
+                            saveSites();
+                            renderSites();
+                            alert('Sites importados com sucesso!');
                         }
-                    } catch (error) {
-                        alert('Erro ao importar arquivo: ' + error.message);
+                    } else {
+                        alert('Arquivo inválido!');
                     }
-                };
-                reader.readAsText(file);
-            }
-            function normalizeText(text) {
-                return text.toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '');
-            }
-
-            // Verifica suporte ao reconhecimento de voz
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-            if (SpeechRecognition) {
-                const recognition = new SpeechRecognition();
-                recognition.lang = 'pt-BR'; // Idioma em português
-                recognition.interimResults = false;
-                recognition.maxAlternatives = 1;
-
-                recognition.onresult = function (event) {
-                    const transcript = event.results[0][0].transcript.trim();
-
-                    const searchInput = document.getElementById('searchInput');
-                    const clearBtn = document.getElementById('clearSearch');
-
-                    // Atualiza o campo de busca com o texto falado
-                    searchInput.value = transcript;
-                    clearBtn.style.display = 'block';
-
-                    // Dispara a função de busca
-                    filterSites(transcript);
-                };
-
-                recognition.onerror = function (event) {
-                    console.error('Erro no reconhecimento de voz:', event.error);
-                };
-
-                function startVoiceSearch() {
-                    recognition.start();
+                } catch (error) {
+                    alert('Erro ao importar arquivo: ' + error.message);
                 }
-            } else {
-                alert('Reconhecimento de voz não suportado neste navegador.');
-                function startVoiceSearch() {
-                    console.log("SpeechRecognition não está disponível.");
-                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+        function normalizeText(text) {
+            return text.toLowerCase()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '');
+        }
+
+        // Verifica suporte ao reconhecimento de voz
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'pt-BR'; // Idioma em português
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = function (event) {
+                const transcript = event.results[0][0].transcript.trim();
+
+                const searchInput = document.getElementById('searchInput');
+                const clearBtn = document.getElementById('clearSearch');
+
+                // Atualiza o campo de busca com o texto falado
+                searchInput.value = transcript;
+                clearBtn.style.display = 'block';
+
+                // Dispara a função de busca
+                filterSites(transcript);
+            };
+
+            recognition.onerror = function (event) {
+                console.error('Erro no reconhecimento de voz:', event.error);
+            };
+
+            function startVoiceSearch() {
+                recognition.start();
             }
-
-            //service worker para funcionamento offline
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function () {
-                    navigator.serviceWorker.register('./sw.js')
-                        .then(function (registration) {
-                            console.log('SW registrado com sucesso:', registration.scope);
-
-                            // Verificar atualizações
-                            registration.addEventListener('updatefound', function () {
-                                console.log('Nova versão do SW disponível');
-                            });
-                        })
-                        .catch(function (error) {
-                            console.log('Falha ao registrar SW:', error);
-                        });
-                });
+        } else {
+            alert('Reconhecimento de voz não suportado neste navegador.');
+            function startVoiceSearch() {
+                console.log("SpeechRecognition não está disponível.");
             }
-            // Detectar status offline/online
-            function updateOnlineStatus() {
-                const indicator = document.getElementById('offlineIndicator');
-                if (navigator.onLine) {
-                    indicator.style.display = 'none';
-                    indicator.textContent = '🌐 Online';
-                } else {
-                    indicator.style.display = 'block';
-                    indicator.textContent = '📱 Modo Offline - Funcionalidade completa disponível';
-                }
-            }
+        }
 
-            // window.addEventListener('online', updateOnlineStatus);
-            // window.addEventListener('offline', updateOnlineStatus);
-
-            // Verificar status inicial após carregar
+        //service worker para funcionamento offline
+        if ('serviceWorker' in navigator) {
             window.addEventListener('load', function () {
-                updateOnlineStatus();
+                navigator.serviceWorker.register('./sw.js')
+                    .then(function (registration) {
+                        console.log('SW registrado com sucesso:', registration.scope);
 
-                // Teste de conectividade real
-                fetch('./manifest.json', { method: 'HEAD', cache: 'no-cache' })
-                    .then(() => {
-                        console.log('Conectividade confirmada');
+                        // Verificar atualizações
+                        registration.addEventListener('updatefound', function () {
+                            console.log('Nova versão do SW disponível');
+                        });
                     })
-                    .catch(() => {
-                        console.log('Sem conectividade real');
-                        const indicator = document.getElementById('offlineIndicator');
-                        indicator.style.display = 'block';
-                        indicator.textContent = '📱 Modo Offline';
+                    .catch(function (error) {
+                        console.log('Falha ao registrar SW:', error);
                     });
             });
+        }
+        // Detectar status offline/online
+        function updateOnlineStatus() {
+            const indicator = document.getElementById('offlineIndicator');
+            if (navigator.onLine) {
+                indicator.style.display = 'none';
+                indicator.textContent = '🌐 Online';
+            } else {
+                indicator.style.display = 'block';
+                indicator.textContent = '📱 Modo Offline - Funcionalidade completa disponível';
+            }
+        }
 
-            window.addEventListener('online', updateOnlineStatus);
-            window.addEventListener('offline', updateOnlineStatus);
-            updateOnlineStatus(); // Verificar status inicial
-            // Carregar sites ao iniciar
-            // Mudança: fazer a chamada async
-            (async () => {
-                await loadSites();
-            })();
-        </script>
+        // window.addEventListener('online', updateOnlineStatus);
+        // window.addEventListener('offline', updateOnlineStatus);
+
+        // Verificar status inicial após carregar
+        window.addEventListener('load', function () {
+            updateOnlineStatus();
+
+            // Teste de conectividade real
+            fetch('./manifest.json', { method: 'HEAD', cache: 'no-cache' })
+                .then(() => {
+                    console.log('Conectividade confirmada');
+                })
+                .catch(() => {
+                    console.log('Sem conectividade real');
+                    const indicator = document.getElementById('offlineIndicator');
+                    indicator.style.display = 'block';
+                    indicator.textContent = '📱 Modo Offline';
+                });
+        });
+
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus(); // Verificar status inicial
+        // Carregar sites ao iniciar
+        // Mudança: fazer a chamada async
+        (async () => {
+            await loadSites();
+        })();
+    </script>
 </body>
 
 
