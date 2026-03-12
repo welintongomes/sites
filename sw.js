@@ -1,4 +1,4 @@
-const CACHE_NAME = 'sites-manager-v17';
+const CACHE_NAME = 'sites-manager-v18';
 const urlsToCache = [
   './',
   './index.html'
@@ -78,6 +78,7 @@ self.addEventListener('activate', function(event) {
   );
 
 });
+
 
 
 
