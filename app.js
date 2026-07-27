@@ -1438,8 +1438,13 @@ function wireEvents() {
   els.importModalBackdrop.addEventListener('click', (e) => { if (e.target === els.importModalBackdrop) els.importModalBackdrop.classList.add('hidden'); });
   els.pickImportBtn.addEventListener('click', () => els.importFileInput.click());
   els.importFileInput.addEventListener('change', async () => {
-    const files = els.importFileInput.files;
-    els.importFileInput.value = '';
+    // 1. Cria uma cópia real dos arquivos antes de limpar o input
+    const files = Array.from(els.importFileInput.files); 
+    
+    // 2. Agora sim podemos limpar o input com segurança
+    els.importFileInput.value = ''; 
+    
+    // 3. Manda os arquivos copiados para a função
     await handleImportFiles(files);
   });
 
