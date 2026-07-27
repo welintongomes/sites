@@ -133,7 +133,12 @@ select.sort-select{
 }
 .btn-icon:hover{ background:var(--bg-panel); }
 .btn-add{ flex:none; }
-
+/* NOVA REGRA: Afeta APENAS os botões de ícone da tela de início (toolbar) */
+.toolbar .btn-icon {
+  width: auto;           /* Tira a largura espremida de 51px */
+  height: auto;          /* Tira a altura espremida de 17px */
+  padding: 9px 14px;     /* Deixa o tamanho igualzinho ao botão de Adicionar Site */
+}
 /* ---------------------------------------------------------------
    Grid & cards ("specimen catalog")
    --------------------------------------------------------------- */
