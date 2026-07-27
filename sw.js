@@ -1,6 +1,6 @@
 // Service worker do "Meus Sites" — cacheia só a casca do app (HTML/CSS/JS
 // próprios). Os sites guardados vivem no IndexedDB e não passam por aqui.
-const CACHE_NAME = 'meus-sites-shell-v3';
+const CACHE_NAME = 'meus-sites-shell-v4';
 const SHELL_FILES = [
   './',
   './index.html',
