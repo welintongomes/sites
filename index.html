@@ -1,1450 +1,192 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Ferramentas</title>
-    <link rel="icon" type="image/svg+xml"
-        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' rx='8' fill='%234CAF50'/%3E%3Cpath d='M16 16h16v4H16zM16 24h16v4H16zM16 32h12v4H16z' fill='white'/%3E%3C/svg%3E">
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#4CAF50">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Sites Manager">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;500;700&display=swap');
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        :root {
-            --neon-cyan: #00ffff;
-            --neon-magenta: #ff00ff;
-            --neon-yellow: #ffff00;
-            --neon-blue: #00d4ff;
-            --dark-bg: #0a0a0a;
-            --card-bg: rgba(15, 15, 35, 0.9);
-        }
-
-        body {
-            font-family: 'Rajdhani', sans-serif;
-            background: var(--dark-bg);
-            min-height: 100vh;
-            color: var(--neon-cyan);
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Fundo animado cyberpunk - APENAS DESKTOP */
-        @media (min-width: 769px) {
-            body::before {
-                content: '';
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background:
-                    linear-gradient(45deg, transparent 30%, rgba(255, 0, 255, 0.03) 30%, rgba(255, 0, 255, 0.03) 70%, transparent 70%),
-                    linear-gradient(-45deg, transparent 30%, rgba(0, 255, 255, 0.03) 30%, rgba(0, 255, 255, 0.03) 70%, transparent 70%);
-                background-size: 50px 50px;
-                animation: gridMove 20s linear infinite;
-                z-index: 0;
-                pointer-events: none;
-            }
-
-            @keyframes gridMove {
-                0% {
-                    background-position: 0 0, 0 0;
-                }
-
-                100% {
-                    background-position: 50px 50px, -50px 50px;
-                }
-            }
-
-            /* Linhas de scan - APENAS DESKTOP */
-            body::after {
-                content: '';
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background: linear-gradient(to bottom,
-                        transparent 50%,
-                        rgba(0, 255, 255, 0.02) 50%);
-                background-size: 100% 4px;
-                animation: scanlines 10s linear infinite;
-                z-index: 1;
-                pointer-events: none;
-            }
-
-            @keyframes scanlines {
-                0% {
-                    background-position: 0 0;
-                }
-
-                100% {
-                    background-position: 0 100%;
-                }
-            }
-        }
-
-        /* Background simples para mobile - SEM ANIMAÇÕES */
-        @media (max-width: 768px) {
-            body {
-                background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2e 100%);
-            }
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            position: relative;
-            z-index: 2;
-        }
-
-        .header {
-            text-align: center;
-            margin-bottom: 10px;
-            color: white;
-        }
-
-        .header h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5em;
-            margin-bottom: 0px;
-            background: linear-gradient(45deg, var(--neon-cyan), var(--neon-magenta), var(--neon-yellow));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow:
-                0 0 10px rgba(0, 255, 255, 0.5),
-                0 0 20px rgba(255, 0, 255, 0.3),
-                0 0 30px rgba(0, 255, 255, 0.2);
-            animation: glitchText 3s infinite;
-            letter-spacing: 3px;
-        }
-
-        @keyframes glitchText {
-
-            0%,
-            90%,
-            100% {
-                transform: translate(0);
-            }
-
-            92% {
-                transform: translate(-2px, 2px);
-            }
-
-            94% {
-                transform: translate(2px, -2px);
-            }
-
-            96% {
-                transform: translate(-2px, -2px);
-            }
-        }
-
-        .header p {
-            font-size: 1.1em;
-            opacity: 0.9;
-            color: var(--neon-blue);
-            text-transform: uppercase;
-            letter-spacing: 5px;
-        }
-
-        .sites-grid {
-            padding: 5.3px 3px 10px 5px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            min-height: 200px;
-            max-height: 71.7vh;
-            overflow-y: auto;
-        }
-
-        /* Scrollbar customizada */
-        .sites-grid::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        .sites-grid::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.5);
-            border-radius: 10px;
-        }
-
-        .sites-grid::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--neon-cyan), var(--neon-magenta));
-            border-radius: 10px;
-            box-shadow: 0 0 10px var(--neon-cyan);
-        }
-
-        .site-card {
-            margin-top: 5px;
-            background: var(--card-bg);
-            border-radius: 15px;
-            padding: 9px;
-            border: 2px solid transparent;
-            background-image:
-                linear-gradient(var(--card-bg), var(--card-bg)),
-                linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
-            background-origin: border-box;
-            background-clip: padding-box, border-box;
-            cursor: pointer;
-            transition: all 0.4s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow:
-                0 0 20px rgba(0, 255, 255, 0.1),
-                inset 0 0 20px rgba(0, 255, 255, 0.05);
-        }
-
-        /* Efeito de scan no hover */
-        .site-card::before {
-            content: '';
-            position: absolute;
-            top: -100%;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom,
-                    transparent,
-                    rgba(0, 255, 255, 0.2),
-                    transparent);
-            transition: top 0.6s;
-        }
-
-        .site-card:hover::before {
-            top: 100%;
-        }
-
-        .site-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: var(--neon-cyan);
-            box-shadow:
-                0 0 40px rgba(0, 255, 255, 0.4),
-                0 0 60px rgba(255, 0, 255, 0.2),
-                inset 0 0 30px rgba(0, 255, 255, 0.1);
-        }
-
-        .site-card h3 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.4em;
-            margin-bottom: 10px;
-            color: var(--neon-cyan);
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-            /*text-transform: uppercase;*/
-            letter-spacing: 2px;
-
-            /* 🔥 ESSENCIAL */
-            white-space: normal;
-            word-break: break-word;
-            overflow-wrap: break-word;
-        }
-
-        .site-card p {
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 15px;
-            font-size: 1.1em;
-            line-height: 1.5;
-        }
-
-        .site-actions {
-            margin-left: 11px;
-            display: flex;
-            gap: 10px;
-            justify-content: flex-start;
-        }
-
-        .btn {
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.8);
-            padding: 8px 16px;
-            border: 2px solid;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.9em;
-            transition: all 0.3s ease;
-            font-weight: 500;
-            font-family: 'Rajdhani', sans-serif;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            background: transparent;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .btn::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 0;
-            height: 0;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.2);
-            transform: translate(-50%, -50%);
-            transition: width 0.6s, height 0.6s;
-        }
-
-        .btn:hover::before {
-            width: 300px;
-            height: 300px;
-        }
-
-        .btn-primary {
-            border-color: var(--neon-cyan);
-            color: var(--neon-cyan);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
-        }
-
-        .btn-primary:hover {
-            background: var(--neon-cyan);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--neon-cyan), 0 0 40px rgba(0, 255, 255, 0.5);
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            border-color: var(--neon-blue);
-            color: var(--neon-blue);
-            box-shadow: 0 0 10px rgba(0, 212, 255, 0.3);
-        }
-
-        .btn-secondary:hover {
-            background: var(--neon-blue);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--neon-blue), 0 0 40px rgba(0, 212, 255, 0.5);
-            transform: translateY(-2px);
-        }
-
-        .add-site-btn {
-            position: fixed;
-            bottom: 1%;
-            right: 5%;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--neon-magenta), #ff0055);
-            border: 3px solid var(--neon-magenta);
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow:
-                0 0 30px rgba(255, 0, 255, 0.6),
-                0 0 60px rgba(255, 0, 255, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
-            font-weight: bold;
-        }
-
-        .add-site-btn:hover {
-            transform: scale(1.15) rotate(90deg);
-            box-shadow:
-                0 0 50px var(--neon-magenta),
-                0 0 100px rgba(255, 0, 255, 0.5);
-        }
-
-        .search-random-btn {
-            position: fixed;
-            bottom: 0.9%;
-            right: 11%;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-blue));
-            border: 3px solid var(--neon-cyan);
-            color: var(--dark-bg);
-            font-size: 28px;
-            cursor: pointer;
-            box-shadow:
-                0 0 30px rgba(0, 255, 255, 0.6),
-                0 0 60px rgba(0, 255, 255, 0.3);
-            transition: all 0.3s ease;
-            z-index: 1000;
-        }
-
-        .search-random-btn:hover {
-            transform: scale(1.15);
-            box-shadow:
-                0 0 50px var(--neon-cyan),
-                0 0 100px rgba(0, 255, 255, 0.5);
-        }
-
-        .fullscreen-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000000;
-            /* troque para preto sólido, sem transparência */
-            z-index: 9999;
-            /* aumente o z-index */
-        }
-
-        .fullscreen-content {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .fullscreen-header {
-            background: linear-gradient(135deg, rgba(15, 15, 35, 0.95), rgba(30, 0, 50, 0.95));
-            color: var(--neon-cyan);
-            padding: 3px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: normal;
-            border-bottom: 2px solid var(--neon-cyan);
-            box-shadow: 0 5px 30px rgba(0, 255, 255, 0.3);
-        }
-
-        .fullscreen-header h2 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.3em;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        }
-
-        .close-btn {
-            background: transparent;
-            border: 2px solid #ff0055;
-            color: #ff0055;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 700;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-        }
-
-        .close-btn:hover {
-            background: #ff0055;
-            color: white;
-            box-shadow: 0 0 20px #ff0055;
-        }
-
-        .edit-btn {
-            background: transparent;
-            border: 2px solid var(--neon-magenta);
-            color: var(--neon-magenta);
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.9em;
-            font-family: 'Rajdhani', sans-serif;
-            font-weight: 700;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-        }
-
-        .edit-btn:hover {
-            background: var(--neon-magenta);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--neon-magenta);
-        }
-
-        .site-frame {
-            flex: 1;
-            border: none;
-            background: white;
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 3000;
-            backdrop-filter: blur(10px);
-        }
-
-        .modal-content {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: var(--card-bg);
-            padding: 30px;
-            border-radius: 15px;
-            width: 90%;
-            max-width: 800px;
-            max-height: 90vh;
-            overflow-y: auto;
-            border: 2px solid var(--neon-cyan);
-            box-shadow:
-                0 0 50px rgba(0, 255, 255, 0.4),
-                0 0 100px rgba(255, 0, 255, 0.2);
-        }
-
-        .modal-content h2 {
-            font-family: 'Orbitron', sans-serif;
-            color: var(--neon-cyan);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 20px;
-            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            color: var(--neon-blue);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .form-group input,
-        .form-group textarea {
-            white-space: pre;
-            width: 100%;
-            padding: 12px;
-            /*background: rgba(0, 0, 0, 0.5);*/
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 8px;
-            /*color: var(--neon-cyan);*/
-            font-size: 1em;
-            transition: border-color 0.3s ease;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--neon-cyan);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
-        }
-
-        .form-group textarea {
-            font-size: 12px;
-            height: 156px;
-            font-family: 'Courier New', monospace;
-            resize: vertical;
-        }
-
-        .form-actions {
-            display: flex;
-            gap: 10px;
-            justify-content: flex-end;
-        }
-
-        #clearSearch {
-            position: absolute;
-            left: 14.6%;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: var(--neon-cyan);
-            cursor: pointer;
-            display: none;
-            font-size: 32px;
-            font-weight: bold;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
-
-        #clearSearch:hover {
-            background: rgba(0, 255, 255, 0.2);
-            color: var(--neon-magenta);
-            transform: translateY(-50%) rotate(90deg);
-        }
-
-        .search-container {
-            width: 90%;
-            margin-bottom: 20px;
-            position: relative;
-            display: inline-block;
-        }
-
-        #searchInput {
-            font-family: 'Rajdhani', sans-serif;
-            font-size: 20px;
-            position: relative;
-            left: 14%;
-            padding: 7px 5px 7px 38px;
-            width: 100%;
-            border-radius: 25px;
-            background: rgba(15, 15, 35, 0.8);
-            border: 2px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow:
-                0 0 20px rgba(0, 255, 255, 0.2),
-                inset 0 0 20px rgba(0, 255, 255, 0.1);
-        }
-
-        #searchInput::placeholder {
-            color: rgba(0, 255, 255, 0.5);
-        }
-
-        #searchInput:focus {
-            border-color: var(--neon-magenta);
-            box-shadow:
-                0 0 30px rgba(255, 0, 255, 0.4),
-                inset 0 0 30px rgba(255, 0, 255, 0.1);
-        }
-
-        .btnInExp {
-            width: 85%;
-            position: fixed;
-            bottom: 18px;
-            left: 12px;
-            display: flex;
-            z-index: 1000;
-            flex-direction: column;
-        }
-
-        .fundo {
-            position: relative;
-            left: 15%;
-        }
-
-        .btn-danger {
-            background: transparent;
-            border-color: #ff0055;
-            color: #ff0055;
-            box-shadow: 0 0 10px rgba(255, 0, 85, 0.3);
-        }
-
-        .btn-danger:hover {
-            background: #ff0055;
-            color: white;
-            box-shadow: 0 0 20px #ff0055, 0 0 40px rgba(255, 0, 85, 0.5);
-            transform: translateY(-2px);
-        }
-
-        #offlineIndicator {
-            border-radius: 50px;
-            font-size: 12px;
-            height: 21px;
-            width: 30%;
-            background: linear-gradient(90deg, #ff0055, var(--neon-magenta));
-            color: white;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            box-shadow: 0 0 20px rgba(255, 0, 255, 0.5);
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            .header {
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                z-index: 1000;
-                padding: 10px 20px;
-                box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            }
-
-            .header h1 {
-                font-size: 1.5em;
-            }
-
-            .modal-content {
-                padding: 20px;
-                width: 95%;
-            }
-
-            .search-random-btn {
-                position: fixed;
-                bottom: 42%;
-                right: 87.9%;
-                width: 30px;
-                height: 30px;
-                border-radius: 50%;
-                background: linear-gradient(45deg, #1e90ff, #3742fa);
-                border: none;
-                color: white;
-                font-size: 20px;
-                cursor: pointer;
-                box-shadow: 0 4px 20px rgba(30, 144, 255, 0.4);
-                transition: all 0.3s ease;
-                z-index: 1000;
-            }
-
-            .add-site-btn {
-                bottom: 32%;
-                right: 87.8%;
-                width: 30px;
-                height: 30px;
-                font-size: 20px;
-                box-shadow: 0 4px 20px rgba(255, 107, 107, 0.4);
-            }
-
-            .btnInExp {
-                width: 85%;
-                position: fixed;
-                bottom: 18px;
-                left: 12px;
-                display: flex;
-                z-index: 1000;
-                flex-direction: column;
-            }
-
-            #clearSearch {
-                position: absolute;
-                left: 3%;
-                top: 50%;
-                transform: translateY(-50%);
-                background: none;
-                border: none;
-                color: rgb(153, 153, 153);
-                cursor: pointer;
-                display: none;
-                font-size: 30px;
-                font-weight: bold;
-            }
-
-            .site-card {
-                margin-top: 5px;
-                background-image: linear-gradient(var(--card-bg), var(--card-bg)),
-                    linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
-                border-radius: 15px;
-                padding: 7px 3px 7px 38px;
-                box-shadow: 0 13px 10px rgba(0, 0, 0, 0.7);
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-                cursor: pointer;
-                transition: all 0.3s ease;
-                position: relative;
-                overflow: hidden;
-            }
-
-            #searchInput {
-                font-size: 20px;
-                position: relative;
-                left: 0%;
-                padding: 7px 5px 7px 38px;
-                width: 123%;
-                border-radius: 5px;
-                border: 1px solid #ddd;
-            }
-
-            .fundo {
-                position: relative;
-                left: 15%;
-            }
-
-            .form-group textarea {
-                font-size: 12px;
-                height: 300px;
-                font-family: 'Courier New', monospace;
-                resize: vertical;
-            }
-
-            .grid-wrapper {
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                min-height: 89vh;
-            }
-
-            .sites-grid {
-                padding-bottom: 15px;
-                border-radius: 10px;
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 25px;
-                min-height: 200px;
-                max-height: 73vh;
-                overflow-y: auto;
-            }
-
-            .fullscreen-header {
-                gap: 13px;
-                background: linear-gradient(135deg, rgba(15, 15, 35, 0.95), rgba(30, 0, 50, 0.95));
-                color: var(--neon-cyan);
-                padding: 3px 20px;
-
-                display: flex;
-                flex-wrap: nowrap;
-                /* 🔥 NUNCA quebra linha */
-                align-items: center;
-                justify-content: space-between;
-
-                border-bottom: 2px solid var(--neon-cyan);
-                box-shadow: 0 5px 30px rgba(0, 255, 255, 0.3);
-
-                overflow: hidden;
-                /* esconde excesso */
-            }
-
-            .fullscreen-header h2 {
-                flex: 1;
-                /* ocupa espaço restante */
-                min-width: 0;
-                /* ESSENCIAL para overflow funcionar */
-
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
-            }
-
-            .fullscreen-header .actions,
-            .fullscreen-header button {
-                flex-shrink: 0;
-                /* nunca encolhe */
-                white-space: nowrap;
-            }
-
-            .edit-btn {
-                background: transparent;
-                border: 2px solid var(--neon-magenta);
-                color: var(--neon-magenta);
-                padding: 3px 15px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.9em;
-                font-family: 'Rajdhani', sans-serif;
-                font-weight: 700;
-                text-transform: uppercase;
-                transition: all 0.3s ease;
-            }
-
-            .close-btn {
-                background: transparent;
-                border: 2px solid #ff0055;
-                color: #ff0055;
-                padding: 3px 15px;
-                border-radius: 6px;
-                cursor: pointer;
-                font-size: 0.9em;
-                font-family: 'Rajdhani', sans-serif;
-                font-weight: 700;
-                text-transform: uppercase;
-                transition: all 0.3s ease;
-            }
-
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B140F">
+<title>Meus Sites — acervo pessoal</title>
+<meta name="description" content="Guarde, organize e abra seus próprios sites, offline, com total isolamento de CSS/HTML/JS.">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🛠️Ferramentas</h1>
-            <div id="offlineIndicator"
-                style="display: none; position: fixed; top: 0; left: 0; right: 0; background: #f39c12; color: white; text-align: center; padding: 5px; z-index: 9999;">
-                📱 Modo Offline
-            </div>
-            <p></p>
-        </div>
-        <div class="grid-wrapper">
-            <div class="sites-grid" id="sitesGrid">
-                <!-- Sites serão carregados aqui -->
-            </div>
-        </div>
+<div id="app">
 
+  
+
+  <main class="grid-wrap">
+    <div id="emptyState" class="empty-state hidden">
+      <h2>A gaveta está vazia</h2>
+      <p>Adicione o primeiro site do seu acervo — um arquivo .html único, vários arquivos do site, ou um .zip da pasta inteira.</p>
+      <button class="btn btn-brass" id="emptyAddBtn">Adicionar o primeiro site</button>
     </div>
-
-
-    <div class="btnInExp">
-        <div class="search-container">
-            <input type="text" id="searchInput" placeholder="Pesquisar sites...">
-            <button id="clearSearch">×</button>
-        </div>
-        <div class="fundo">
-            <button class="btn btn-secondary" onclick="exportSites()" style="margin-left: 10px;">Exportar Sites</button>
-            <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()"
-                style="margin-left: 10px;">Importar Sites</button>
-            <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importSites(event)">
-        </div>
-        <button class="add-site-btn" onclick="openAddSiteModal()">+</button>
-        <button class="search-random-btn" onclick="startVoiceSearch()">🎤</button>
-
-
-        <!-- Modal para adicionar/editar site -->
-        <div class="modal" id="siteModal">
-            <div class="modal-content">
-                <h2 id="modalTitle">Adicionar Nova Ferramenta</h2>
-                <form id="siteForm">
-                    <div class="form-group">
-                        <label for="siteName">Nome da Ferramenta:</label>
-                        <input type="text" id="siteName" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="siteDescription">Descrição:</label>
-                        <input type="text" id="siteDescription">
-                    </div>
-                    <div class="form-group">
-                        <label for="siteCode">Código HTML:</label>
-                        <textarea id="siteCode" placeholder="Cole aqui o código HTML completo da sua ferramenta..."
-                            required></textarea>
-                    </div>
-                    <div class="form-actions">
-                        <button type="button" class="btn btn-secondary" onclick="closeSiteModal()">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Salvar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Overlay para exibir site em tela cheia -->
-        <div class="fullscreen-overlay" id="fullscreenOverlay">
-
-            <div class="fullscreen-content">
-                <iframe class="site-frame" id="siteFrame" srcdoc=""
-                    style="width:100%; height:100%; border:none; background:#fff;">
-                </iframe>
-
-                <div class="fullscreen-header bottom-header">
-                    <div class="left-buttons">
-                        <button class="close-btn" onclick="closeFullscreen()">Fechar</button>
-                        <button class="edit-btn" onclick="editCurrentSite()">Editar</button>
-                    </div>
-                    <h2 id="fullscreenTitle" class="title-right">Ferramenta</h2>
-                </div>
-            </div>
-
-        </div>
-
+    <div id="siteGrid" class="site-grid" role="list"></div>
+    <div id="sentinel" class="sentinel"></div>
+    <div id="loadMoreHint" class="load-more-hint hidden"></div>
+  </main>
+  <header class="topbar">
+    <div class="topbar-brand">
+      <h1>Sites</h1>
+      <span class="eyebrow">acervo</span>
+      <div class="topbar-stats" id="statsLabel">0 sites</div>
     </div>
-    <script>
-        // mudando para indexedb Configuração do IndexedDB
-        const DB_NAME = 'SitesManagerDB';
-        const DB_VERSION = 1;
-        const STORE_NAME = 'sites';
-
-        let currentPage = 0;
-        const ITEMS_PER_PAGE = 4;//altere para aumentar ou diminuir os itens padrao por pagina ao abrir ou atualizar o site
-
-        async function initDB() {
-            return new Promise((resolve, reject) => {
-                const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve(request.result);
-
-                request.onupgradeneeded = (event) => {
-                    const db = event.target.result;
-                    if (!db.objectStoreNames.contains(STORE_NAME)) {
-                        db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
-                    }
-                };
-            });
-        }
-        //variaveis globais
-        let sites = [];
-        let currentSiteIndex = -1;
-        let editingIndex = -1;
-        let lastOpenedSiteIndex = -1;
-
-        // Carregar sites do armazenamento ou criar site exemplo
-        async function loadSites() {
-            try {
-                const db = await initDB();
-                const transaction = db.transaction([STORE_NAME], 'readonly');
-                const store = transaction.objectStore(STORE_NAME);
-                const request = store.getAll();
-
-                request.onsuccess = () => {
-                    if (request.result.length > 0) {
-                        sites = request.result.map(item => ({
-                            name: item.name,
-                            description: item.description,
-                            code: item.code
-                        }));
-                    } else {
-                        // Manter o site exemplo existente
-                        sites = [{
-                            name: "Contador de Cliques",
-                            description: "Ferramenta simples para contar cliques",
-                            code: `<!DOCTYPE html>
-        <html lang="pt-BR">
-        }
-            <\/script>//quando tiver barras elas tem que ter / para funcionar
-        </body>
-        </html>`
-                            // ... coloque aqui o codigo html para sites exemplo
-                        }];
-                        saveSites(); // Salvar no IndexedDB
-                    }
-
-                    // Carregar último site aberto DEPOIS de carregar os sites
-                    const savedLastOpened = localStorage.getItem('lastOpenedSiteIndex');
-                    if (savedLastOpened !== null) {
-                        const index = parseInt(savedLastOpened);
-                        if (index >= 0 && index < sites.length) {
-                            lastOpenedSiteIndex = index;
-                        }
-                    }
-
-                    renderSites();
-
-                };
-            } catch (error) {
-                console.error('Erro ao carregar sites:', error);
-                renderSites();
-            }
-        }
-        // Precarregar recursos críticos
-        //function preloadCriticalResources() {
-        //if ('serviceWorker' in navigator && 'caches' in window) {
-        //caches.open(CACHE_NAME).then(cache => {
-        // Precarrega recursos importantes
-        //cache.addAll([
-        //'/',
-        //'/index.html'
-        //]);
-        //});
-        //}
-        //}
-
-        // Salvar sites no armazenamento indexedb
-        async function saveSites() {
-            try {
-                const db = await initDB();
-                const transaction = db.transaction([STORE_NAME], 'readwrite');
-                const store = transaction.objectStore(STORE_NAME);
-
-                // Limpar dados existentes
-                const clearRequest = store.clear();
-                clearRequest.onsuccess = () => {
-                    // Adicionar todos os sites em batch
-                    sites.forEach(site => {
-                        store.add(site);
-                    });
-                };
-            } catch (error) {
-                console.error('Erro ao salvar sites:', error);
-            }
-        }
-
-        // Renderizar lista de sites
-
-        function renderSites(append = false) {
-            const grid = document.getElementById('sitesGrid');
-
-            if (!append) {
-                grid.innerHTML = '';
-                currentPage = 0;
-            }
-
-            let sitesToRender = sites.slice().reverse();
-            if (lastOpenedSiteIndex >= 0) {
-                const lastOpenedSite = sites[lastOpenedSiteIndex];
-                sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
-                sitesToRender.unshift(lastOpenedSite);
-            }
-
-            const start = currentPage * ITEMS_PER_PAGE;
-            const end = start + ITEMS_PER_PAGE;
-            const pageItems = sitesToRender.slice(start, end);
-
-            pageItems.forEach((site) => {
-                const index = sites.indexOf(site);
-                const card = document.createElement('div');
-                card.className = 'site-card';
-                card.innerHTML = `
-            <h3>${site.name}</h3>
-            <p>${site.description || 'Sem descrição'}</p>
-            <div class="site-actions">
-                <button class="btn btn-primary" onclick="openSite(${index})">Abrir</button>
-                <button class="btn edit-btn" onclick="editSite(${index})">Editar</button>
-                <button class="btn btn-danger" onclick="deleteSite(${index})">Excluir</button>
-            </div>
-        `;
-                grid.appendChild(card);
-            });
-
-            // Se ainda tem mais sites, mostra botão
-            if (end < sitesToRender.length) {
-                const loadBtn = document.createElement('button');
-                loadBtn.className = 'btn btn-secondary';
-                loadBtn.textContent = `Carregar mais (${sitesToRender.length - end} restantes)`;
-                loadBtn.style.cssText = 'width:100%; margin-top:10px; grid-column: 1/-1;';
-                loadBtn.onclick = () => {
-                    currentPage++;
-                    loadBtn.remove();
-                    renderSites(true); // append = true, não limpa o grid
-                };
-                grid.appendChild(loadBtn);
-            }
-        }
-
-        //Adicionar funcionalidade de pesquisa
-        function filterSites(searchTerm) {
-            if (!searchTerm.trim()) {
-                renderSites();
-                return;
-            }
-
-            const searchWords = searchTerm.trim().split(/\s+/).map(word => normalizeText(word));
-
-            const filteredSites = sites.filter(site => {
-                const normalizedName = normalizeText(site.name);
-                const normalizedDesc = site.description ? normalizeText(site.description) : '';
-
-                if (searchWords.length === 1) {
-                    // Uma palavra: busca em qualquer site que contenha essa palavra
-                    return normalizedName.includes(searchWords[0]) || normalizedDesc.includes(searchWords[0]);
-                } else {
-                    // Múltiplas palavras: TODAS devem estar no mesmo título OU na mesma descrição
-                    const nameContainsAll = searchWords.every(word => normalizedName.includes(word));
-                    const descContainsAll = searchWords.every(word => normalizedDesc.includes(word));
-
-                    return nameContainsAll || descContainsAll;
-                }
-            });
-
-            const grid = document.getElementById('sitesGrid');
-            grid.innerHTML = '';
-
-            if (filteredSites.length === 0) {
-                grid.innerHTML = '<p style="text-align: center; color: #666; font-style: italic;">Nenhum site encontrado</p>';
-                return;
-            }
-            //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
-            //modificaçao para mostrar os ultimos sites adicionados ao topo da lista
-            let sitesToRender = filteredSites.slice().reverse();
-            if (lastOpenedSiteIndex >= 0) {
-                const lastOpenedSite = sites[lastOpenedSiteIndex];
-                if (filteredSites.includes(lastOpenedSite)) {
-                    sitesToRender = sitesToRender.filter(site => site !== lastOpenedSite);
-                    sitesToRender.unshift(lastOpenedSite);
-                }
-            }
-            sitesToRender.forEach((site) => {
-                const originalIndex = sites.indexOf(site);
-                const card = document.createElement('div');
-                card.className = 'site-card';
-                card.innerHTML = `
-                    <h3>${site.name}</h3>
-                    <p>${site.description || 'Sem descrição'}</p>
-                    <div class="site-actions">
-                        <button class="btn btn-primary" onclick="openSite(${originalIndex})">Abrir</button>
-                        <button class="btn edit-btn" onclick="editSite(${originalIndex})">Editar</button>
-                        <button class="btn btn-danger" onclick="deleteSite(${originalIndex})">Excluir</button>
-                    </div>
-                `;
-                grid.appendChild(card);
-            });
-        }
-
-        // Abrir site em tela cheia
-        function openSite(index) {
-            currentSiteIndex = index;
-            lastOpenedSiteIndex = index;
-            localStorage.setItem('lastOpenedSiteIndex', index.toString());
-            console.log('Site aberto - índice:', index, 'nome:', sites[index].name);
-            const site = sites[index];
-            document.getElementById('fullscreenTitle').textContent = site.name;
-            //lazy loading para otimizaçao
-            const iframe = document.getElementById('siteFrame');
-            iframe.srcdoc = '';
-
-            iframe.srcdoc = site.code;
-
-            document.getElementById('fullscreenOverlay').style.display = 'block';
-        }
-
-        // Fechar tela cheia
-        function closeFullscreen() {
-            const iframe = document.getElementById('siteFrame');
-            iframe.srcdoc = '';
-            iframe.src = 'about:blank'; // força parar execução
-            document.getElementById('fullscreenOverlay').style.display = 'none';
-            currentSiteIndex = -1;
-            renderSites();
-        }
-
-        // Abrir modal para adicionar site
-        function openAddSiteModal() {
-            editingIndex = -1;
-            document.getElementById('modalTitle').textContent = 'Adicionar Nova Ferramenta';
-            document.getElementById('siteName').value = '';
-            document.getElementById('siteDescription').value = '';
-            document.getElementById('siteCode').value = '';
-            document.getElementById('siteModal').style.display = 'block';
-        }
-
-        // Editar site
-        function editSite(index) {
-            if (index < 0 || index >= sites.length) {
-                console.error('Índice de site inválido:', index);
-                return;
-            }
-
-            editingIndex = index;
-            const site = sites[index];
-            document.getElementById('modalTitle').textContent = 'Editar Ferramenta';
-            document.getElementById('siteName').value = site.name;
-            document.getElementById('siteDescription').value = site.description || '';
-            document.getElementById('siteCode').value = site.code;
-            document.getElementById('siteModal').style.display = 'block';
-        }
-        //função para deletar site
-        function deleteSite(index) {
-            if (index < 0 || index >= sites.length) {
-                console.error('Índice de site inválido:', index);
-                return;
-            }
-
-            const site = sites[index];
-            if (confirm(`Tem certeza que deseja excluir "${site.name}"?`)) {
-                sites.splice(index, 1);
-                // Atualizar lastOpenedSiteIndex se necessário
-                if (lastOpenedSiteIndex === index) {
-                    lastOpenedSiteIndex = -1;
-                    localStorage.removeItem('lastOpenedSiteIndex');
-                } else if (lastOpenedSiteIndex > index) {
-                    lastOpenedSiteIndex--;
-                    localStorage.setItem('lastOpenedSiteIndex', lastOpenedSiteIndex.toString());
-                }
-                saveSites();
-                renderSites();
-            }
-        }
-
-        // Editar site atual (quando em tela cheia)
-        function editCurrentSite() {
-            if (currentSiteIndex >= 0 && currentSiteIndex < sites.length) {
-                const indexToEdit = currentSiteIndex; // Guarda o índice antes de fechar
-                closeFullscreen();
-                setTimeout(() => {
-                    editSite(indexToEdit);
-                }, 100);
-            }
-        }
-
-        // Fechar modal
-        function closeSiteModal() {
-            document.getElementById('siteModal').style.display = 'none';
-        }
-
-        // Salvar site (formulário)
-        document.getElementById('siteForm').addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const name = document.getElementById('siteName').value;
-            const description = document.getElementById('siteDescription').value;
-            const code = document.getElementById('siteCode').value;
-
-            const siteData = { name, description, code };
-
-            if (editingIndex >= 0) {
-                sites[editingIndex] = siteData;
-            } else {
-                sites.push(siteData);
-            }
-
-            saveSites();
-            renderSites();
-            closeSiteModal();
-        });
-
-        // Fechar modal ao clicar fora
-        window.addEventListener('click', function (e) {
-            const modal = document.getElementById('siteModal');
-            if (e.target === modal) {
-                closeSiteModal();
-            }
-        });
-
-        //event listener para funçao de pesquisa
-        let searchTimeout;
-        document.getElementById('searchInput').addEventListener('input', function (e) {
-            const searchTerm = e.target.value;
-            const clearBtn = document.getElementById('clearSearch');
-
-            clearTimeout(searchTimeout);
-
-            if (searchTerm.trim() !== '') {
-                clearBtn.style.display = 'block';
-            } else {
-                clearBtn.style.display = 'none';
-            }
-
-            searchTimeout = setTimeout(() => {
-                filterSites(searchTerm);
-            }, 300);
-        });
-
-        // Event listener para o botão de limpar
-        document.getElementById('clearSearch').addEventListener('click', function () {
-            document.getElementById('searchInput').value = '';
-            document.getElementById('clearSearch').style.display = 'none';
-            renderSites();
-            document.getElementById('searchInput').focus();
-        });
-
-        // Event listener para Enter na pesquisa
-        document.getElementById('searchInput').addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') {
-                document.getElementById('searchInput').value = '';
-                document.getElementById('clearSearch').style.display = 'none';
-                renderSites();
-            }
-        });
-        //funçoes para importar e exportar
-        function exportSites() {
-            const dataStr = JSON.stringify(sites, null, 2);
-            const dataBlob = new Blob([dataStr], { type: 'application/json' });
-
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(dataBlob);
-            link.download = 'meus-sites.json';
-            link.click();
-        }
-
-        function importSites(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                try {
-                    const importedSites = JSON.parse(e.target.result);
-                    if (Array.isArray(importedSites)) {
-                        if (confirm('Isso substituirá todos os seus sites atuais. Deseja continuar?')) {
-                            sites = importedSites;
-                            saveSites();
-                            renderSites();
-                            alert('Sites importados com sucesso!');
-                        }
-                    } else {
-                        alert('Arquivo inválido!');
-                    }
-                } catch (error) {
-                    alert('Erro ao importar arquivo: ' + error.message);
-                }
-            };
-            reader.readAsText(file);
-            event.target.value = '';
-        }
-        function normalizeText(text) {
-            return text.toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '');
-        }
-
-        // Verifica suporte ao reconhecimento de voz
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        if (SpeechRecognition) {
-            const recognition = new SpeechRecognition();
-            recognition.lang = 'pt-BR'; // Idioma em português
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
-
-            recognition.onresult = function (event) {
-                const transcript = event.results[0][0].transcript.trim();
-
-                const searchInput = document.getElementById('searchInput');
-                const clearBtn = document.getElementById('clearSearch');
-
-                // Atualiza o campo de busca com o texto falado
-                searchInput.value = transcript;
-                clearBtn.style.display = 'block';
-
-                // Dispara a função de busca
-                filterSites(transcript);
-            };
-
-            recognition.onerror = function (event) {
-                console.error('Erro no reconhecimento de voz:', event.error);
-            };
-
-            function startVoiceSearch() {
-                recognition.start();
-            }
-        } else {
-            alert('Reconhecimento de voz não suportado neste navegador.');
-            function startVoiceSearch() {
-                console.log("SpeechRecognition não está disponível.");
-            }
-        }
-
-        //service worker para funcionamento offline
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function () {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(function (registration) {
-                        console.log('SW registrado com sucesso:', registration.scope);
-
-                        // Verificar atualizações
-                        registration.addEventListener('updatefound', function () {
-                            console.log('Nova versão do SW disponível');
-                        });
-                    })
-                    .catch(function (error) {
-                        console.log('Falha ao registrar SW:', error);
-                    });
-            });
-        }
-        // Detectar status offline/online
-        function updateOnlineStatus() {
-            const indicator = document.getElementById('offlineIndicator');
-            if (navigator.onLine) {
-                indicator.style.display = 'none';
-                indicator.textContent = '🌐 Online';
-            } else {
-                indicator.style.display = 'block';
-                indicator.textContent = '📱 Modo Offline - Funcionalidade completa disponível';
-            }
-        }
-
-        // window.addEventListener('online', updateOnlineStatus);
-        // window.addEventListener('offline', updateOnlineStatus);
-
-        // Verificar status inicial após carregar
-        window.addEventListener('load', function () {
-            updateOnlineStatus();
-
-            // Teste de conectividade real
-            fetch('./manifest.json', { method: 'HEAD', cache: 'no-cache' })
-                .then(() => {
-                    console.log('Conectividade confirmada');
-                })
-                .catch(() => {
-                    console.log('Sem conectividade real');
-                    const indicator = document.getElementById('offlineIndicator');
-                    indicator.style.display = 'block';
-                    indicator.textContent = '📱 Modo Offline';
-                });
-        });
-
-        window.addEventListener('online', updateOnlineStatus);
-        window.addEventListener('offline', updateOnlineStatus);
-        updateOnlineStatus(); // Verificar status inicial
-        // Carregar sites ao iniciar
-        // Mudança: fazer a chamada async
-        (async () => {
-            await loadSites();
-        })();
-    </script>
+    <div class="toolbar">
+      <div class="search-field">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="search" id="searchInput" placeholder="Buscar por nome, tag ou descrição…" aria-label="Buscar sites" autocomplete="off">
+      </div>
+      <select class="sort-select" id="sortSelect" aria-label="Ordenar por">
+        <option value="recent">Recentes</option>
+        <option value="name">Nome A–Z</option>
+        <option value="fav">Favoritos</option>
+      </select>
+      <button class="btn-icon" id="exportAllBtn" title="Exportar backup completo" aria-label="Exportar backup completo">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
+      </button>
+      <button class="btn-icon" id="importBtn" title="Importar backup ou .zip" aria-label="Importar">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+      </button>
+      <button class="btn btn-brass btn-add" id="addBtn">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        Site
+      </button>
+    </div>
+  </header>
+</div>
+
+<div id="sheetLayer"></div>
+
+<!-- ============ Modal: adicionar / editar site ============ -->
+<div id="editModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="modal-header">
+      <h2 id="editModalTitle">Novo site</h2>
+      <button class="modal-close" id="editModalClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" id="editModalBody">
+      <div class="field">
+        <label for="siteNameInput">Nome do site</label>
+        <input type="text" id="siteNameInput" placeholder="Ex.: Portfólio 2024" maxlength="120">
+      </div>
+      <div class="field">
+        <label for="siteDescInput">Descrição (opcional)</label>
+        <textarea id="siteDescInput" placeholder="Uma linha sobre esse site, pra lembrar depois"></textarea>
+      </div>
+      <div class="field">
+        <label for="siteTagsInput">Tags (separadas por vírgula)</label>
+        <input type="text" id="siteTagsInput" placeholder="portfólio, cliente-x, landing page">
+      </div>
+
+      <div class="field">
+        <label>Ícone</label>
+        <div class="icon-picker">
+          <div class="icon-preview" id="iconPreview"></div>
+          <div class="upload-row">
+            <button type="button" class="btn btn-ghost" id="pickIconBtn">Escolher imagem</button>
+            <button type="button" class="btn btn-ghost hidden" id="autoIconBtn">Usar automático</button>
+          </div>
+          <input type="file" id="iconFileInput" accept="image/*" class="hidden">
+        </div>
+        <div class="field-hint">Se não escolher nada, tentamos usar o favicon do site ou geramos um ícone com as iniciais.</div>
+      </div>
+
+      <div class="field">
+        <label>Arquivos do site</label>
+        <div class="upload-row">
+          <button type="button" class="btn btn-ghost" id="pickFilesBtn">Selecionar arquivo(s)</button>
+          <button type="button" class="btn btn-ghost hidden" id="pickFolderBtn">Selecionar pasta</button>
+          <button type="button" class="btn btn-ghost" id="pickZipBtn">Importar .zip</button>
+        </div>
+        <input type="file" id="filesInput" multiple class="hidden"
+          accept=".html,.htm,.css,.js,.mjs,.json,.svg,.png,.jpg,.jpeg,.gif,.webp,.ico,.woff,.woff2,.ttf,.otf,.mp3,.mp4,.webm,.txt,.xml,.map">
+        <input type="file" id="folderInput" multiple webkitdirectory class="hidden">
+        <input type="file" id="zipInput" accept=".zip" class="hidden">
+        <div class="field-hint">Sites com mais de um arquivo (CSS, JS, imagens em subpastas): use "Selecionar pasta" no computador ou, no celular, gere um .zip da pasta do site e use "Importar .zip".</div>
+        <div class="file-list hidden" id="fileListPreview"></div>
+      </div>
+
+      <div class="field hidden" id="entryFileField">
+        <label for="entryFileSelect">Arquivo principal (o que abre primeiro)</label>
+        <select id="entryFileSelect"></select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="editCancelBtn">Cancelar</button>
+      <button class="btn btn-brass" id="editSaveBtn">Salvar site</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal: importar backup ============ -->
+<div id="importModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="importModalTitle">
+    <div class="modal-header">
+      <h2 id="importModalTitle">Importar</h2>
+      <button class="modal-close" id="importModalClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p style="margin-top:0;font-size:14px;line-height:1.5;">
+        Escolha um arquivo <strong>.json</strong> exportado daqui (um site ou o backup completo), ou um ou mais <strong>.zip</strong> de sites individuais.
+      </p>
+      <div class="upload-row">
+        <button type="button" class="btn btn-ghost" id="pickImportBtn">Escolher arquivo(s)</button>
+      </div>
+      <input type="file" id="importFileInput" accept=".json,.zip" multiple class="hidden">
+      <div class="progress-wrap hidden" id="importProgressWrap">
+        <div class="progress-bar"><div id="importProgressBar"></div></div>
+        <div class="progress-label" id="importProgressLabel"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="importCloseBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal: confirmação genérica ============ -->
+<div id="confirmModalBackdrop" class="modal-backdrop hidden">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle" style="max-width:400px;">
+    <div class="modal-header">
+      <h2 id="confirmModalTitle">Confirmar</h2>
+    </div>
+    <div class="modal-body">
+      <p id="confirmModalMessage" style="margin:0;font-size:14.5px;line-height:1.5;"></p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="confirmCancelBtn">Cancelar</button>
+      <button class="btn btn-rust" id="confirmOkBtn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Visualizador em tela cheia (sandbox) ============ -->
+<div id="viewerBackdrop" class="viewer-backdrop hidden">
+  
+  <div class="viewer-frame-wrap" style="position:relative;">
+    <div class="viewer-loading" id="viewerLoading">carregando…</div>
+    <iframe id="viewerIframe" sandbox="allow-scripts allow-forms allow-popups allow-modals allow-same-origin allow-downloads" referrerpolicy="no-referrer" title="Site aberto"></iframe>
+  </div>
+  <div class="viewer-topbar">
+    <button class="btn-icon" id="viewerCloseBtn" aria-label="Fechar site">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <div class="vname" id="viewerName"></div>
+    <button class="btn-icon" id="viewerEditBtn" title="Editar" aria-label="Editar site">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+    </button>
+    <button class="btn-icon" id="viewerExportBtn" title="Exportar" aria-label="Exportar site">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<script src="app.js"></script>
 </body>
-
-
 </html>

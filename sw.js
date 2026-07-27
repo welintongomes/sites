@@ -1,85 +1,44 @@
-const CACHE_NAME = 'sites-manager-v18';
-const urlsToCache = [
+// Service worker do "Meus Sites" — cacheia só a casca do app (HTML/CSS/JS
+// próprios). Os sites guardados vivem no IndexedDB e não passam por aqui.
+const CACHE_NAME = 'meus-sites-shell-v1';
+const SHELL_FILES = [
   './',
-  './index.html'
+  './index.html',
+  './style.css',
+  './app.js',
+  './manifest.webmanifest',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
 ];
 
-// Instalar o Service Worker
-self.addEventListener('install', function(event) {
+self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(function(cache) {
-        console.log('Cache aberto');
-        return cache.addAll(urlsToCache);
-      })
-      .catch(function(error) {
-        console.log('Erro ao adicionar ao cache:', error);
-      })
+      .then((cache) => cache.addAll(SHELL_FILES))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Interceptar requisições
-self.addEventListener('fetch', function(event) {
-  // Ignorar requisições que não são do mesmo domínio ou são para manifest
-  if (!event.request.url.startsWith(self.location.origin) || 
-      event.request.url.includes('manifest.json')) {
-    return;
-  }
-
-  event.respondWith(
-    caches.match(event.request)
-      .then(function(response) {
-        // Retorna do cache se disponível
-        if (response) {
-          console.log('Servindo do cache:', event.request.url);
-          return response;
-        }
-        
-        // Buscar da rede
-        return fetch(event.request)
-          .then(function(response) {
-            // Verificar se é uma resposta válida
-            if (!response || response.status !== 200 || response.type !== 'basic') {
-              return response;
-            }
-
-            // Clonar a resposta
-            var responseToCache = response.clone();
-
-            caches.open(CACHE_NAME)
-              .then(function(cache) {
-                cache.put(event.request, responseToCache);
-              });
-
-            return response;
-          })
-          .catch(function() {
-            // Se falhar, tentar servir a página principal
-            if (event.request.destination === 'document') {
-              return caches.match('./index.html');
-            }
-          });
-      })
-  );
-});
-
-// Ativar o Service Worker
-self.addEventListener('activate', function(event) {
+self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then(function(cacheNames) {
-      return Promise.all(
-        cacheNames.map(function(cacheName) {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
-        })
-      );
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
+  event.respondWith(
+    caches.match(event.request).then((cached) => {
+      if (cached) return cached;
+      return fetch(event.request).then((res) => {
+        if (res && res.status === 200 && res.type === 'basic') {
+          const clone = res.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        }
+        return res;
+      }).catch(() => cached);
     })
   );
-
 });
-
-
-
-
-
