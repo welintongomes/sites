@@ -641,13 +641,16 @@ function setupInfiniteScroll() {
 
 async function updateStatsFooter() {
   const count = state.index.length;
-  let usageStr = '';
-  if (navigator.storage && navigator.storage.estimate) {
-    try {
-      const est = await navigator.storage.estimate();
-      usageStr = ' · ' + formatBytes(est.usage || 0) + ' usados';
-    } catch (e) { /* estimate indisponível, ignora */ }
-  }
+  
+  // 1. Soma a propriedade 'totalSize' de todos os sites salvos no index
+  const totalBytes = state.index.reduce((soma, site) => {
+    return soma + (site.totalSize || 0);
+  }, 0);
+
+  // 2. Formata o tamanho usando a sua função que já existe
+  const usageStr = totalBytes > 0 ? ' · ' + formatBytes(totalBytes) + ' usados' : '';
+
+  // 3. Atualiza o texto na tela
   els.statsLabel.textContent = `${count} site${count === 1 ? '' : 's'}${usageStr}`;
 }
 

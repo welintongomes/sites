@@ -99,7 +99,7 @@ a{ color:var(--brass-strong); }
 .search-field{
   flex:1; display:flex; align-items:center; gap:8px;
   background:var(--bg-panel-2); border:1px solid var(--divider-strong);
-  border-radius:var(--radius-s); padding:9px 12px;
+  border-radius:var(--radius-s); padding:6px 6px;
 }
 .search-field svg{ flex:none; opacity:.6; }
 .search-field input{
@@ -128,7 +128,7 @@ select.sort-select{
 .btn-rust:hover{ background:var(--rust-strong); }
 .btn-icon{
   background:var(--bg-panel-2); border:1px solid var(--divider-strong);
-  border-radius:var(--radius-s); width:36px; height:36px; flex:none;
+  border-radius:var(--radius-s); width:51px; height:17px; flex:none;
   display:inline-flex; align-items:center; justify-content:center; color:var(--paper);
 }
 .btn-icon:hover{ background:var(--bg-panel); }
@@ -339,7 +339,7 @@ main.grid-wrap{ flex:1; padding:18px 16px 64px; }
   display:flex; flex-direction:column;
 }
 .viewer-topbar{
-  display:flex; align-items:center; gap:10px; padding:10px 12px;
+  display:flex; align-items:center; gap:10px; padding: 3px 18px;
   background:var(--bg-panel); border-bottom:1px solid var(--divider-strong); flex:none;
 }
 .viewer-topbar .vname{
