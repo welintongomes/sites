@@ -71,7 +71,9 @@ a{ color:var(--brass-strong); }
 #app{ min-height:100%; display:flex; flex-direction:column; }
 
 .topbar{
-  position:sticky; top:0; z-index:20;
+  width: 100%;
+  position:fixed; bottom:0; z-index:20;
+  box-shadow: var(--shadow);
   background:var(--bg-panel);
   border-bottom:1px solid var(--divider-strong);
   padding:14px 16px 12px;
@@ -148,6 +150,7 @@ main.grid-wrap{ flex:1; padding:18px 16px 64px; }
 
 .site-grid{
   display:grid; gap:14px;
+  margin-bottom: 50px;
   grid-template-columns:repeat(auto-fill, minmax(150px,1fr));
 }
 @media (min-width:640px){
@@ -285,6 +288,15 @@ main.grid-wrap{ flex:1; padding:18px 16px 64px; }
 }
 .field textarea{ resize:vertical; min-height:64px; }
 .field-hint{ font-size:12px; color:var(--ink-soft); margin-top:5px; line-height:1.4; }
+
+.paste-html-panel{
+  margin-top:10px; padding:12px; background:var(--card-face-alt);
+  border:1px solid rgba(36,26,19,.14); border-radius:var(--radius-s);
+}
+.code-textarea{
+  min-height:200px; font-family:var(--font-mono); font-size:12.5px;
+  line-height:1.5; white-space:pre; overflow-wrap:normal; overflow-x:auto;
+}
 
 .upload-row{ display:flex; gap:8px; flex-wrap:wrap; }
 .upload-row .btn-ghost{ border-color:rgba(36,26,19,.2); color:var(--ink); background:#fff; }

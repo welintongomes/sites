@@ -26,7 +26,7 @@ Duas formas de usar:
 
 ## Adicionando um site
 
-Toque em **"+ Site"**. Você pode trazer os arquivos de três formas:
+Toque em **"+ Site"**. Você pode trazer os arquivos de  quatro formas:
 
 - **Selecionar arquivo(s)**: escolha o `.html` e, se tiver, o `.css`, `.js`
   e imagens junto — funciona em qualquer aparelho, mas perde subpastas
@@ -38,6 +38,8 @@ Toque em **"+ Site"**. Você pode trazer os arquivos de três formas:
   do site (no iPhone, o próprio app Arquivos tem "Comprimir"; no Android,
   qualquer app de arquivos faz isso) e importe o `.zip` aqui — as
   subpastas são preservadas automaticamente.
+- **colar .html**: uma forma rápida de inserir novos sites, basta copiar
+  e colar algum codigo completo html, você também pode exportar `.html`
 
 Se o site tiver mais de um arquivo `.html`, escolha qual é o principal
 (o que abre primeiro). O ícone é detectado automaticamente a partir do

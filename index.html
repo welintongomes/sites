@@ -12,9 +12,6 @@
 </head>
 <body>
 <div id="app">
-
-  
-
   <main class="grid-wrap">
     <div id="emptyState" class="empty-state hidden">
       <h2>A gaveta está vazia</h2>
@@ -99,9 +96,21 @@
           <button type="button" class="btn btn-ghost" id="pickFilesBtn">Selecionar arquivo(s)</button>
           <button type="button" class="btn btn-ghost hidden" id="pickFolderBtn">Selecionar pasta</button>
           <button type="button" class="btn btn-ghost" id="pickZipBtn">Importar .zip</button>
+          <!-- Botão Colar HTML (ID corrigido) -->
+          <button type="button" class="btn btn-ghost" id="pickPasteBtn">Colar HTML</button>
         </div>
-        <input type="file" id="filesInput" multiple class="hidden"
-          accept=".html,.htm,.css,.js,.mjs,.json,.svg,.png,.jpg,.jpeg,.gif,.webp,.ico,.woff,.woff2,.ttf,.otf,.mp3,.mp4,.webm,.txt,.xml,.map">
+        
+        <!-- Painel de Colar HTML (IDs corrigidos) -->
+        <div id="pasteHtmlPanel" class="hidden" style="margin-top: 10px; display: flex; flex-direction: column; gap: 8px; background: rgba(0,0,0,0.03); padding: 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,0.1);">
+          <input type="text" id="pasteHtmlFilename" placeholder="Nome do arquivo (ex: index.html)" value="index.html" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          <textarea id="pasteHtmlTextarea" placeholder="Cole seu código HTML completo aqui..." rows="6" style="width: 100%; resize: vertical; padding: 8px; font-family: monospace; border: 1px solid #ccc; border-radius: 4px;"></textarea>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-brass" id="confirmPasteBtn">Salvar HTML</button>
+            <button type="button" class="btn btn-ghost" id="cancelPasteBtn">Cancelar</button>
+          </div>
+        </div>
+
+        <input type="file" id="filesInput" multiple class="hidden" accept=".html,.htm,.css,.js,.mjs,.json,.svg,.png,.jpg,.jpeg,.gif,.webp,.ico,.woff,.woff2,.ttf,.otf,.mp3,.mp4,.webm,.txt,.xml,.map">
         <input type="file" id="folderInput" multiple webkitdirectory class="hidden">
         <input type="file" id="zipInput" accept=".zip" class="hidden">
         <div class="field-hint">Sites com mais de um arquivo (CSS, JS, imagens em subpastas): use "Selecionar pasta" no computador ou, no celular, gere um .zip da pasta do site e use "Importar .zip".</div>
@@ -182,6 +191,14 @@
     <button class="btn-icon" id="viewerExportBtn" title="Exportar" aria-label="Exportar site">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
     </button>
+    <!-- <button class="btn-icon" id="viewerExportBtn" title="Exportar Backup" aria-label="Exportar Backup">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3"/><path d="m7 8 5-5 5 5"/><path d="M5 21h14"/></svg>
+  </button> -->
+
+  <!-- NOVO BOTÃO: Exportar apenas o HTML -->
+  <button class="btn-icon" id="viewerExportHtmlBtn" title="Baixar .html" aria-label="Baixar .html">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+  </button>
   </div>
 </div>
 

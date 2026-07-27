@@ -506,11 +506,12 @@ function cacheEls() {
     'editModalBackdrop', 'editModalTitle', 'editModalClose', 'siteNameInput', 'siteDescInput', 'siteTagsInput',
     'iconPreview', 'pickIconBtn', 'autoIconBtn', 'iconFileInput',
     'pickFilesBtn', 'pickFolderBtn', 'pickZipBtn', 'filesInput', 'folderInput', 'zipInput', 'fileListPreview',
+    'pickPasteBtn', 'pasteHtmlPanel', 'pasteHtmlFilename', 'pasteHtmlTextarea', 'confirmPasteBtn', 'cancelPasteBtn',
     'entryFileField', 'entryFileSelect', 'editCancelBtn', 'editSaveBtn',
     'importModalBackdrop', 'importModalClose', 'pickImportBtn', 'importFileInput',
     'importProgressWrap', 'importProgressBar', 'importProgressLabel', 'importCloseBtn',
     'confirmModalBackdrop', 'confirmModalTitle', 'confirmModalMessage', 'confirmCancelBtn', 'confirmOkBtn',
-    'viewerBackdrop', 'viewerCloseBtn', 'viewerName', 'viewerEditBtn', 'viewerExportBtn', 'viewerLoading', 'viewerIframe',
+    'viewerBackdrop', 'viewerCloseBtn', 'viewerName', 'viewerEditBtn', 'viewerExportBtn', 'viewerExportHtmlBtn', 'viewerLoading', 'viewerIframe',
     'toastStack',
   ];
   for (const id of ids) els[id] = document.getElementById(id);
@@ -678,6 +679,7 @@ function openActionSheet(siteId) {
       <button class="sheet-item" data-action="open">Abrir</button>
       <button class="sheet-item" data-action="edit">Editar</button>
       <button class="sheet-item" data-action="export">Exportar este site (.json)</button>
+      <button class="sheet-item" data-action="export-html">Baixar como HTML (.html)</button>
       <button class="sheet-item" data-action="fav">${site.favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}</button>
       <button class="sheet-item danger" data-action="delete">Excluir</button>
       <button class="sheet-cancel" data-action="cancel">Cancelar</button>
@@ -691,6 +693,7 @@ function openActionSheet(siteId) {
     if (action === 'open') openViewer(siteId);
     else if (action === 'edit') openEditModal(siteId);
     else if (action === 'export') exportSite(siteId);
+    else if (action === 'export-html') exportSiteAsHtml(siteId);
     else if (action === 'fav') toggleFavorite(siteId);
     else if (action === 'delete') confirmDeleteSite(siteId);
   });
@@ -760,8 +763,39 @@ function resetEditModalState() {
   els.fileListPreview.classList.add('hidden');
   els.entryFileField.classList.add('hidden');
   els.entryFileSelect.innerHTML = '';
+  
+  // NOVO: Limpa e esconde o campo de colar HTML
+  if(els.pasteHtmlContainer) els.pasteHtmlContainer.classList.add('hidden');
+  if(els.pasteHtmlTextarea) els.pasteHtmlTextarea.value = '';
 }
-
+// NOVA FUNÇÃO: Transforma o texto colado em um arquivo de fato (index.html)
+function addPastedHtml() {
+  const htmlContent = els.pasteHtmlTextarea.value.trim();
+  if (!htmlContent) {
+    showToast('O campo de HTML está vazio.', true);
+    return;
+  }
+  
+  // Cria um arquivo virtual a partir do texto
+  const blob = new Blob([htmlContent], { type: 'text/html' });
+  
+  // Garante que o nome não vai sobrescrever outro arquivo colado anteriormente se existir
+  let filename = 'index.html';
+  let counter = 1;
+  while (state.pendingFiles.has(filename)) {
+    filename = `index_${counter}.html`;
+    counter++;
+  }
+  
+  state.pendingFiles.set(filename, { blob, size: blob.size, mime: 'text/html' });
+  refreshFileListPreview();
+  autoDetectEntryAndIcon();
+  
+  // Limpa o textarea e oculta o container
+  els.pasteHtmlTextarea.value = '';
+  els.pasteHtmlContainer.classList.add('hidden');
+  showToast(`Arquivo ${filename} adicionado com sucesso.`);
+}
 function openAddModal() {
   resetEditModalState();
   state.editingSiteId = null;
@@ -938,7 +972,151 @@ async function saveSite() {
   }
 }
 
-/* ----------------------------- Exportar ----------------------------- */
+/* ----------------------------- Exportar como .html autônomo -----------------------------
+   Diferente do SiteRenderer (que usa blob: URLs, válidas só durante a sessão
+   dentro deste app), aqui tudo vira data: URI ou é embutido diretamente no
+   HTML — o arquivo resultante funciona sozinho, fora do app, pra sempre.
+   Só a página de entrada é exportada (sites com várias páginas HTML mantêm
+   as demais fora deste arquivo único; use o backup .json pra levar tudo).
+   ===================================================================== */
+
+class StandaloneHtmlBuilder {
+  constructor(fileMap) {
+    this.fileMap = fileMap;
+    this.dataUriCache = new Map();
+  }
+  findFile(path) {
+    if (path == null) return null;
+    if (this.fileMap.has(path)) return path;
+    const lower = path.toLowerCase();
+    for (const k of this.fileMap.keys()) if (k.toLowerCase() === lower) return k;
+    return null;
+  }
+  async getDataUri(path) {
+    const key = this.findFile(path);
+    if (!key) return null;
+    if (this.dataUriCache.has(key)) return this.dataUriCache.get(key);
+    const blob = this.fileMap.get(key);
+    const b64 = await blobToBase64(blob);
+    const uri = `data:${blob.type || guessMime(key)};base64,${b64}`;
+    this.dataUriCache.set(key, uri);
+    return uri;
+  }
+  async getText(path) {
+    const key = this.findFile(path);
+    if (!key) return null;
+    return this.fileMap.get(key).text();
+  }
+  async rewriteCssUrlsToData(cssText, basePath) {
+    const matches = [...cssText.matchAll(/url\(\s*(['"]?)([^'")]+)\1\s*\)/g)];
+    let out = '';
+    let lastIndex = 0;
+    for (const m of matches) {
+      const raw = m[2];
+      let replacement = m[0];
+      if (!/^[a-z][a-z0-9+.-]*:/i.test(raw) && !raw.startsWith('data:') && !raw.startsWith('//')) {
+        const resolved = resolveRelative(basePath, raw);
+        const uri = resolved != null ? await this.getDataUri(resolved) : null;
+        if (uri) replacement = `url("${uri}")`;
+      }
+      out += cssText.slice(lastIndex, m.index) + replacement;
+      lastIndex = m.index + m[0].length;
+    }
+    out += cssText.slice(lastIndex);
+    return out;
+  }
+  async build(entryPath) {
+    const key = this.findFile(entryPath);
+    if (!key) throw new Error('arquivo principal não encontrado');
+    const htmlText = await this.getText(key);
+    const doc = new DOMParser().parseFromString(htmlText, 'text/html');
+    const baseDir = dirOf(key);
+
+    for (const el of Array.from(doc.querySelectorAll('link[href]'))) {
+      const href = el.getAttribute('href');
+      if (!href || /^[a-z][a-z0-9+.-]*:/i.test(href) || href.startsWith('//') || href.startsWith('data:')) continue;
+      const resolved = resolveRelative(baseDir, href);
+      if (resolved == null) continue;
+      const rel = (el.getAttribute('rel') || '').toLowerCase();
+      const isCss = rel.includes('stylesheet') || /\.css$/i.test(href);
+      if (isCss) {
+        const text = await this.getText(resolved);
+        if (text != null) {
+          const styleEl = doc.createElement('style');
+          styleEl.textContent = await this.rewriteCssUrlsToData(text, dirOf(resolved));
+          el.replaceWith(styleEl);
+        }
+      } else {
+        const uri = await this.getDataUri(resolved);
+        if (uri) el.setAttribute('href', uri);
+      }
+    }
+    for (const el of Array.from(doc.querySelectorAll('script[src]'))) {
+      const src = el.getAttribute('src');
+      if (!src || /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//') || src.startsWith('data:')) continue;
+      const resolved = resolveRelative(baseDir, src);
+      const text = resolved != null ? await this.getText(resolved) : null;
+      if (text != null) { el.removeAttribute('src'); el.textContent = text; }
+    }
+    for (const el of Array.from(doc.querySelectorAll('img[src], source[src], audio[src], video[src], embed[src]'))) {
+      const src = el.getAttribute('src');
+      if (!src || /^[a-z][a-z0-9+.-]*:/i.test(src) || src.startsWith('//') || src.startsWith('data:')) continue;
+      const resolved = resolveRelative(baseDir, src);
+      const uri = resolved != null ? await this.getDataUri(resolved) : null;
+      if (uri) el.setAttribute('src', uri);
+    }
+    for (const el of Array.from(doc.querySelectorAll('img[srcset], source[srcset]'))) {
+      const ss = el.getAttribute('srcset');
+      if (!ss) continue;
+      const newParts = [];
+      for (const part of ss.split(',')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const spaceIdx = trimmed.search(/\s/);
+        const urlPart = spaceIdx === -1 ? trimmed : trimmed.slice(0, spaceIdx);
+        const rest = spaceIdx === -1 ? '' : trimmed.slice(spaceIdx);
+        if (/^[a-z][a-z0-9+.-]*:/i.test(urlPart) || urlPart.startsWith('//') || urlPart.startsWith('data:')) { newParts.push(trimmed); continue; }
+        const resolved = resolveRelative(baseDir, urlPart);
+        const uri = resolved != null ? await this.getDataUri(resolved) : null;
+        newParts.push((uri || urlPart) + rest);
+      }
+      el.setAttribute('srcset', newParts.join(', '));
+    }
+    for (const el of Array.from(doc.querySelectorAll('style'))) {
+      el.textContent = await this.rewriteCssUrlsToData(el.textContent || '', baseDir);
+    }
+    for (const el of Array.from(doc.querySelectorAll('[style]'))) {
+      el.setAttribute('style', await this.rewriteCssUrlsToData(el.getAttribute('style') || '', baseDir));
+    }
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  }
+}
+
+async function exportSiteAsHtml(id) {
+  showToast('Preparando HTML…');
+  try {
+    const site = await dbGetSite(id);
+    const filesArr = await dbGetFilesForSite(id);
+    if (filesArr.length === 1 && /\.html?$/i.test(filesArr[0].path)) {
+      downloadBlob(filesArr[0].blob, sanitizeFilename(site.name) + '.html');
+      showToast('HTML exportado.');
+      return;
+    }
+    const fileMap = new Map(filesArr.map((f) => [f.path, f.blob]));
+    const builder = new StandaloneHtmlBuilder(fileMap);
+    const html = await builder.build(site.entryFile);
+    const blob = new Blob([html], { type: 'text/html' });
+    downloadBlob(blob, sanitizeFilename(site.name) + '.html');
+    const htmlPagesCount = filesArr.filter((f) => /\.html?$/i.test(f.path)).length;
+    showToast(htmlPagesCount > 1
+      ? 'HTML exportado — só a página principal (esse site tem mais páginas; use o backup .json pra levar tudo).'
+      : 'HTML exportado — um arquivo só, com tudo embutido.');
+  } catch (err) {
+    showToast('Erro ao exportar HTML: ' + err.message, true);
+  }
+}
+
+/* ----------------------------- Exportar (.json) ----------------------------- */
 
 function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
@@ -991,7 +1169,40 @@ async function exportAll() {
     showToast('Erro ao exportar tudo: ' + err.message, true);
   }
 }
-
+/* ----------------------------- Exportar ----------------------------- */
+// exportar html
+// NOVA FUNÇÃO: Exporta um site individualmente apenas como arquivo .html
+async function exportSiteAsHtml(id) {
+  showToast('Preparando exportação em HTML…');
+  try {
+    const site = await dbGetSite(id);
+    const filesArr = await dbGetFilesForSite(id);
+    
+    // Busca o arquivo principal do site (entryFile)
+    let entryPath = site.entryFile;
+    let entryFileObj = filesArr.find(f => f.path === entryPath);
+    
+    // Fallback de segurança: caso não encontre pelo nome exato, pega o primeiro .html
+    if (!entryFileObj) {
+        const htmlFiles = filesArr.filter(f => /\.html?$/i.test(f.path));
+        if (htmlFiles.length > 0) {
+            entryFileObj = htmlFiles[0];
+        } else if (filesArr.length > 0) {
+            entryFileObj = filesArr[0]; 
+        } else {
+            throw new Error('Nenhum arquivo encontrado no site para exportar.');
+        }
+    }
+    
+    // Efetua o download do Blob como arquivo HTML original
+    const safeFilename = site.name ? site.name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'site';
+    downloadBlob(entryFileObj.blob, safeFilename + '.html');
+    
+    showToast('Site exportado como HTML.');
+  } catch (err) {
+    showToast('Erro ao exportar como HTML: ' + err.message, true);
+  }
+}
 /* ----------------------------- Importar ----------------------------- */
 
 function updateImportProgress(done, total, label) {
@@ -1173,6 +1384,29 @@ function wireEvents() {
     }
   });
 
+  els.pickPasteBtn.addEventListener('click', () => {
+    els.pasteHtmlPanel.classList.toggle('hidden');
+    if (!els.pasteHtmlPanel.classList.contains('hidden')) els.pasteHtmlTextarea.focus();
+  });
+  els.cancelPasteBtn.addEventListener('click', () => {
+    els.pasteHtmlPanel.classList.add('hidden');
+    els.pasteHtmlTextarea.value = '';
+  });
+  els.confirmPasteBtn.addEventListener('click', () => {
+    const code = els.pasteHtmlTextarea.value;
+    if (!code.trim()) { showToast('Cole algum código HTML antes.', true); return; }
+    let filename = els.pasteHtmlFilename.value.trim() || 'index.html';
+    if (!/\.html?$/i.test(filename)) filename += '.html';
+    const blob = new Blob([code], { type: 'text/html' });
+    state.pendingFiles.set(filename, { blob, size: blob.size, mime: 'text/html' });
+    refreshFileListPreview();
+    autoDetectEntryAndIcon();
+    els.pasteHtmlPanel.classList.add('hidden');
+    els.pasteHtmlTextarea.value = '';
+    els.pasteHtmlFilename.value = 'index.html';
+    showToast(`"${filename}" adicionado.`);
+  });
+
   els.pickIconBtn.addEventListener('click', () => els.iconFileInput.click());
   els.iconFileInput.addEventListener('change', async () => {
     const file = els.iconFileInput.files[0];
@@ -1217,6 +1451,11 @@ function wireEvents() {
   });
   els.viewerExportBtn.addEventListener('click', () => {
     if (state.openSiteId) exportSite(state.openSiteId);
+  });
+
+  // NOVO: Ação do botão de exportar apenas HTML
+  els.viewerExportHtmlBtn.addEventListener('click', () => {
+    if (state.openSiteId) exportSiteAsHtml(state.openSiteId);
   });
 
   document.addEventListener('keydown', (e) => {
