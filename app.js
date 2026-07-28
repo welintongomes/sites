@@ -719,6 +719,7 @@ async function confirmDeleteSite(id) {
 /* ----------------------------- Visualizador (sandbox) ----------------------------- */
 
 async function openViewer(id) {
+  document.body.style.overflow = 'hidden';
   const site = await dbGetSite(id);
   if (!site) { showToast('Site não encontrado.', true); return; }
   state.openSiteId = id;
@@ -742,6 +743,7 @@ async function showPage(path) {
   els.viewerIframe.srcdoc = html;
 }
 function closeViewer() {
+  document.body.style.overflow = ''; // <-- ADICIONE AQUI
   els.viewerBackdrop.classList.add('hidden');
   els.viewerIframe.removeAttribute('srcdoc');
   if (state.currentRenderer) { state.currentRenderer.revokeAll(); state.currentRenderer = null; }
