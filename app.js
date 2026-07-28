@@ -1346,6 +1346,8 @@ function wireEvents() {
   }, 150));
   els.sortSelect.addEventListener('change', () => {
     state.sortMode = els.sortSelect.value;
+    // NOVA LINHA: Salva a sua escolha no navegador
+    localStorage.setItem('meusSites_filtro', state.sortMode);
     applyFilterAndSort();
   });
 
@@ -1483,6 +1485,14 @@ function wireEvents() {
 async function init() {
   cacheEls();
   wireEvents();
+  // --- INÍCIO DA NOVA PARTE ---
+  // Busca se você tinha algum filtro salvo da última vez
+  const filtroSalvo = localStorage.getItem('meusSites_filtro');
+  if (filtroSalvo) {
+    state.sortMode = filtroSalvo;           // Atualiza a memória do Javascript
+    els.sortSelect.value = filtroSalvo;     // Garante que a caixinha select mostre o nome certo
+  }
+  // --- FIM DA NOVA PARTE ---
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* ok */ }
   await loadIndex();
   applyFilterAndSort();
