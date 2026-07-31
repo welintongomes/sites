@@ -501,6 +501,7 @@ const state = {
 const els = {};
 function cacheEls() {
   const ids = [
+    'fileEditorModalBackdrop', 'fileEditorTitle', 'fileEditorClose', 'fileEditorTextarea', 'fileEditorCancelBtn', 'fileEditorSaveBtn',
     'statsLabel', 'searchInput', 'sortSelect', 'exportAllBtn', 'importBtn', 'addBtn',
     'emptyState', 'emptyAddBtn', 'siteGrid', 'sentinel', 'loadMoreHint', 'sheetLayer',
     'editModalBackdrop', 'editModalTitle', 'editModalClose', 'siteNameInput', 'siteDescInput', 'siteTagsInput',
@@ -859,13 +860,22 @@ function refreshFileListPreview() {
   const entries = Array.from(state.pendingFiles.entries());
   if (entries.length === 0) { els.fileListPreview.classList.add('hidden'); els.fileListPreview.innerHTML = ''; return; }
   els.fileListPreview.classList.remove('hidden');
+  
+  // Função para saber se é um arquivo de texto editável
+  const isEditable = (path) => /\.(html?|css|js|mjs|json|txt|xml|svg|md)$/i.test(path);
+
   els.fileListPreview.innerHTML = entries.map(([path, info]) => `
     <div class="file-list-row" data-path="${escapeHtml(path)}">
       <span class="fname">${escapeHtml(path)}</span>
       <span class="fsize">${formatBytes(info.size)}</span>
-      <button type="button" aria-label="Remover ${escapeHtml(path)}">✕</button>
+      <div style="display: flex; gap: 8px;">
+        ${isEditable(path) ? `<button type="button" class="edit-file-btn" title="Editar código"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></button>` : ''}
+        <button type="button" class="remove-file-btn" title="Remover ${escapeHtml(path)}">✕</button>
+      </div>
     </div>`).join('');
-  els.fileListPreview.querySelectorAll('button').forEach((btn) => {
+    
+  // Evento de remover
+  els.fileListPreview.querySelectorAll('.remove-file-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const path = btn.closest('.file-list-row').dataset.path;
       state.pendingFiles.delete(path);
@@ -873,6 +883,59 @@ function refreshFileListPreview() {
       refreshEntryFileOptions();
     });
   });
+
+  // Evento de editar
+  els.fileListPreview.querySelectorAll('.edit-file-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const path = btn.closest('.file-list-row').dataset.path;
+      openFileEditor(path); // Chamará a função que vamos criar no Passo 3
+    });
+  });
+}
+
+// --- LÓGICA DO EDITOR DE ARQUIVOS ---
+let currentEditingFilePath = null;
+
+async function openFileEditor(path) {
+  const fileInfo = state.pendingFiles.get(path);
+  if (!fileInfo) return;
+  try {
+    const text = await fileInfo.blob.text(); // Extrai o texto do arquivo
+    currentEditingFilePath = path;
+    els.fileEditorTitle.textContent = `Editando: ${path}`;
+    els.fileEditorTextarea.value = text;
+    els.fileEditorModalBackdrop.classList.remove('hidden');
+  } catch (e) {
+    showToast('Erro: Não foi possível ler o arquivo como texto.', true);
+  }
+}
+
+function closeFileEditor() {
+  els.fileEditorModalBackdrop.classList.add('hidden');
+  els.fileEditorTextarea.value = '';
+  currentEditingFilePath = null;
+}
+
+function saveFileEditor() {
+  if (!currentEditingFilePath) return;
+  const text = els.fileEditorTextarea.value;
+  const fileInfo = state.pendingFiles.get(currentEditingFilePath);
+  
+  if (fileInfo) {
+    // Cria um novo arquivo com o texto modificado
+    const newBlob = new Blob([text], { type: fileInfo.mime || 'text/plain' });
+    
+    // Atualiza a memória
+    state.pendingFiles.set(currentEditingFilePath, {
+      blob: newBlob,
+      size: newBlob.size,
+      mime: fileInfo.mime
+    });
+    
+    refreshFileListPreview(); // Atualiza o tamanho em MB/KB lá na lista
+    closeFileEditor();
+    showToast('Modificação salva! Clique em "Salvar site" para aplicar ao banco.');
+  }
 }
 
 async function autoDetectEntryAndIcon() {
@@ -1354,6 +1417,10 @@ function wireEvents() {
   els.addBtn.addEventListener('click', openAddModal);
   els.emptyAddBtn.addEventListener('click', openAddModal);
   els.editModalClose.addEventListener('click', closeEditModal);
+  // Eventos do Editor de Arquivos
+  els.fileEditorClose.addEventListener('click', closeFileEditor);
+  els.fileEditorCancelBtn.addEventListener('click', closeFileEditor);
+  els.fileEditorSaveBtn.addEventListener('click', saveFileEditor);
   els.editCancelBtn.addEventListener('click', closeEditModal);
   els.editModalBackdrop.addEventListener('click', (e) => { if (e.target === els.editModalBackdrop) closeEditModal(); });
   els.editSaveBtn.addEventListener('click', saveSite);

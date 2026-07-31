@@ -270,7 +270,7 @@ main.grid-wrap{ flex:1; padding:18px 16px 64px; }
   display:flex; align-items:center; gap:10px; padding:18px 20px 10px;
   border-bottom:1px solid rgba(36,26,19,.1);
 }
-.modal-header h2{ font-family:var(--font-display); font-size:19px; margin:0; flex:1; }
+.modal-header h2{ font-family:var(--font-display); font-size:19px; margin:0; flex:1; text-align: center; }
 .modal-close{
   background:none; border:none; color:var(--ink-soft); width:30px; height:30px;
   border-radius:50%; display:flex; align-items:center; justify-content:center;
